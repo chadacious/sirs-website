@@ -1,26 +1,69 @@
 import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import AppContext from './AppContext';
+import DiagramView from './DiagramView';
+// import db from './IndexedDB';
+import 'semantic-ui-css/semantic.min.css';
+import 'storm-react-diagrams/dist/style.min.css';
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+class App extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      version: null,
+      // jsonSIRScale: null,
+      // gridView: {},
+      // handleSelectionChanged: this.handleSelectionChanged,
+      // handleGridViewChange: this.handleGridViewChange,
+    };
+    this.setAppState = this.setAppState.bind(this);
+  }
+
+  /* Set the AppContext state */
+  setAppState(newState) {
+    console.log('newState', newState);
+    // const version = this.state.version || newState.version;
+    // console.log(newState);
+    // if (version) {
+    //   if (newState.diagramEngine ) {
+    //     // rebuild the jsonSIRScale from the latest diagram
+    //     // console.log('should update sirscale');
+    //     const jsonSIRScale = generateSIRScale(newState.diagramEngine.diagramModel);
+    //     if (jsonSIRScale) {
+    //       newState = { ...newState, jsonSIRScale };
+    //       // console.log('updating jsonSirScale', jsonSIRScale)
+    //       // console.log(newState.diagramEngine.diagramModel.serializeDiagram());
+    //       db.diagram.put({
+    //         version,
+    //         jsonDiagram: JSON.stringify(jsonSIRScale),
+    //       });
+    //     }
+    //   } else if (newState.jsonSIRScale) {
+    //     const model = new SRD.DiagramModel();
+    //     this.restoreGridPosition(model);
+    //     generateModel(model, newState.jsonSIRScale);
+    //     addNodeListeners(model, this.state);
+    //     (newState.diagramEngine || this.state.diagramEngine).setDiagramModel(model);
+
+    //     // this.state.diagramEngine.repaintCanvas();
+    //     // console.log('regenerated');
+    //     // this.forceUpdate();
+    //     // console.log(newState.jsonSIRScale);
+    //     db.diagram.put({
+    //       version,
+    //       jsonSIRScale: JSON.stringify(newState.jsonSIRScale),
+    //     });
+    //   }
+    // }
+    this.setState(newState);
+  }
+
+  render() {
+    return (
+      <AppContext.Provider value={{ state: this.state, setAppState: this.setAppState }}>
+        <DiagramView />
+      </AppContext.Provider>
+    );
+  }
 }
 
 export default App;

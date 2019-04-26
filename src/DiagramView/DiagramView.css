@@ -1,0 +1,55 @@
+.srd-canvas{
+    min-height: 100vh;
+    background-color: rgb(60,60,60) !important;
+    color: rgba(white, .05);
+    background-image:
+        repeating-linear-gradient(
+            0deg,
+            transparent,
+            transparent 25px,
+            #555 25px,
+            #555 26px),
+        repeating-linear-gradient(
+            -90deg,
+            transparent,
+            transparent 25px,
+            #555 25px,
+            #555 26px
+        );
+    background-size: 26px 26px;
+}
+
+/* these next two are to deal with a strange problem when labels are moved past the grid region */
+.srd-default-link__label { overflow: visible; }
+.srd-default-label { background: rgba(0,0,0,0)!important; border: none!important }
+
+/* .Decision-label {
+    color: white;
+    position: absolute;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+} */
+
+/* A couple of styles when representing choiceTypes of CHECKBOX */
+.checkbox-box {
+    width: 12px;
+    height: 12px;
+    display: inline-block;
+    vertical-align: middle;
+    border: 1px solid white;
+}
+
+.checkbox-explanation {
+    margin-left: 5px;
+    vertical-align: middle;
+}
+
+.name {
+    width: 100%;
+    display: inline-block;
+    white-space: nowrap;
+    border: 1px solid gray;
+}
