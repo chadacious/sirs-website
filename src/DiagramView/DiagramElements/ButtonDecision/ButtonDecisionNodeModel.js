@@ -1,6 +1,6 @@
 import * as _ from "lodash";
 import { NodeModel, Toolkit } from 'storm-react-diagrams';
-import { DefaultPortModel } from 'storm-react-diagrams';
+import { PortWithExtrasModel } from '../PortWithExtras/PortWithExtrasModel';
 
 export class ButtonDecisionNodeModel extends NodeModel {
 	constructor(name = "Untitled", color = "rgb(0,192,255)") {
@@ -10,11 +10,11 @@ export class ButtonDecisionNodeModel extends NodeModel {
 	}
 
 	addInPort(label) {
-		return this.addPort(new DefaultPortModel(true, Toolkit.UID(), label));
+		return this.addPort(new PortWithExtrasModel(true, Toolkit.UID(), label));
 	}
 
 	addOutPort(label) {
-		return this.addPort(new DefaultPortModel(false, Toolkit.UID(), label));
+		return this.addPort(new PortWithExtrasModel(false, Toolkit.UID(), label));
 	}
 
 	deSerialize(object, engine) {

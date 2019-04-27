@@ -1,8 +1,8 @@
 import { AbstractPortFactory } from "storm-react-diagrams";
 
-export class SimplePortFactory extends AbstractPortFactory {
+export class PortWithExtrasFactory extends AbstractPortFactory {
 	constructor(type, cb) {
-		super(type);
+		super("PortWithExtras");
 		this.cb = cb;
 	}
 

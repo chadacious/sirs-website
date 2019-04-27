@@ -1,61 +1,56 @@
 import React, { Component } from 'react'
+import * as _ from 'lodash';
 import { Form, Tab, Segment, List, Grid, Button, Icon } from 'semantic-ui-react';
 import { withAppContext } from '../../../../AppContext';
-import { getOutLinks } from '../../../utils/diagram-utils';
+import { getOutPorts, getNodePortById } from '../../../utils/diagram-utils';
 
 // import { deepFind, updateSIRScale } from '../../utils/helpers';
 // import { updateChecklistItemNodeOutportLabel } from '../../utils/sirScaleToDiagram';
 
 class ProcessProps extends Component {
     state = {
-        modNode: {
+        selectedNode: {
             name: '',
             extras: {
                 code: '',
             },
         },
-        selectedOutLink: {
-            code: '',
+        selectedOutPort: {
             name: '',
+            extras: {
+                code: '',
+            },
         },
     };
 
     componentDidMount() {
-        this.setState({ modNode: this.props.node });
+        this.setState({ selectedNode: this.props.node });
     }
 
     handleChangeNode = (e, data) => {
         const { name, value } = data;
-        this.setState({ modNode: { ...this.state.modNode, [name]: value } });
+        this.setState({ selectedNode: { ...this.state.selectedNode, [name]: value } });
     }
 
     handleChangeNodeExtras = (e, data) => {
         const { name, value } = data;
-        this.setState({ modNode: { extras: { ...this.state.modNode.extras , [name]: value } } });
+        this.setState({ selectedNode: { extras: { ...this.state.selectedNode.extras , [name]: value } } });
     }
 
-    handleChoiceChanged = (e, data) => {
-        const { sirItem, selectedChoice } = this.state;
-        const { name, value, remove, newChoice } = data;
-        // update the sirItem choice corresponding to this selected Choice
-        const newChoices = [];
-        sirItem.choices.forEach((choice) => {
-        if (choice.code === selectedChoice.code && !newChoice) {
-            if (!remove) {
-            // console.log('modifying');
-            newChoices.push({ ...choice, [name]: value });
-            }
-        } else {
-            newChoices.push({ ...choice });
-        }
-        });
-        if (newChoice) {
-        newChoices.push({ ...newChoice });
-        }
-        this.setState({
-        selectedChoice: { ...this.state.selectedChoice, [name]: value },
-        sirItem: { ...this.state.sirItem, choices: newChoices },
-        });
+    handleChangeOutPort = (e, data) => {
+        const { name, value } = data;
+        const { selectedNode, selectedOutPort } = this.state;
+        const outPort = getNodePortById(selectedNode, selectedOutPort.id);
+        Object.assign(outPort, { [name]: value });
+        this.setState({ selectedNode, selectedOutPort: { ...outPort } });
+    }
+
+    handleChangeOutPortExtras = (e, data) => {
+        const { name, value } = data;
+        const { selectedNode, selectedOutPort } = this.state;
+        const outPort = getNodePortById(selectedNode, selectedOutPort.id);
+        Object.assign(outPort.extras, { [name]: value });
+        this.setState({ selectedNode, selectedOutPort: { ...outPort } });
     }
 
     //   handleNewChoiceClick = () => {
@@ -77,13 +72,12 @@ class ProcessProps extends Component {
 
     handleSubmit = () => {
         // console.log(this.props);
-        const { context: { setAppState, state: { diagramEngine } } } = this.props;
-        const { modNode } = this.state;
-        const { node } = this.props;
+        const { node, context: { setAppState, state: { diagramEngine } } } = this.props;
+        const { selectedNode } = this.state;
         const model = diagramEngine.getDiagramModel()
         const nodes = model.getNodes();
         // find the original node in the model from that which was sent in via props
-        nodes[node.id] = Object.assign(nodes[node.id], modNode);
+        nodes[node.id] = Object.assign(nodes[node.id], selectedNode);
         setAppState({ diagramEngine });
         this.props.onClose();
     }
@@ -104,17 +98,17 @@ class ProcessProps extends Component {
     }
 
     render() {
-        const { modNode } = this.state;
-        const outLinks = getOutLinks(modNode);
+        const { selectedNode } = this.state;
+        const outPorts = getOutPorts(selectedNode);
+        // console.log('outPorts',outPorts);
         const {
-            id,
             name,
             extras: {
                 code,
                 shortName,
                 description,
             },
-        } = modNode;
+        } = selectedNode;
         const selectedOutPort = this.state.selectedOutPort;
 
         const panes = [
@@ -145,7 +139,7 @@ class ProcessProps extends Component {
                         <List.Item key={outPort.id} onClick={() => {this.handleOutPortSelected(outPort)}}>
                         <Icon link name='trash' onClick={() => this.handleDeleteOutPort(outPort)} />
                         <List.Content>
-                            <List.Header>{outPort.id}</List.Header>
+                            <List.Header>{outPort.extras.code}</List.Header>
                             <List.Description>{outPort.label}</List.Description>
                         </List.Content>
                         <Icon link size="large" name='chevron up' onClick={() => this.handleOutPortMove(outPort, -1)} />
@@ -163,11 +157,11 @@ class ProcessProps extends Component {
                         <Grid.Column width={12}>
                         <Form.Input
                             fluid
-                            name="id"
+                            name="code"
                             placeholder='Assign a human readable code'
-                            value={selectedOutPort.code}
-                            disabled={!selectedOutPort.code}
-                            onChange={this.handleOutPortChanged}
+                            value={selectedOutPort.extras.code}
+                            disabled={!selectedOutPort.id}
+                            onChange={this.handleChangeOutPortExtras}
                         />
                         </Grid.Column>
                     </Grid.Row>
@@ -182,7 +176,7 @@ class ProcessProps extends Component {
                             placeholder='Enter the button text'
                             value={selectedOutPort.label}
                             disabled={!selectedOutPort.id}
-                            onChange={this.handleOutPortChanged}
+                            onChange={this.handleChangeOutPort}
                         />
                         </Grid.Column>
                     </Grid.Row>
@@ -193,8 +187,8 @@ class ProcessProps extends Component {
                             label="Quick Select"
                             data-tooltip="Allows for quick selection from the subgroup list when tagging."
                             name="subGroupAcenstry"
-                            value={selectedOutPort.subGroupAcenstry}
-                            onChange={this.handleOutPortChanged}
+                            value={selectedOutPort.extras.subGroupAcenstry}
+                            onChange={this.handleChangeOutPortExtras}
                             disabled={!selectedOutPort.id} 
                         />
                         </Grid.Column>

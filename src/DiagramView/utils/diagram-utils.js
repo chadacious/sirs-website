@@ -1,6 +1,7 @@
 import * as _ from 'lodash';
 import * as SRD from 'storm-react-diagrams'
-import { SimplePortFactory } from '../DiagramElements/SimplePortFactory';
+import { PortWithExtrasFactory } from '../DiagramElements/PortWithExtras/PortWithExtrasFactory';
+import { PortWithExtrasModel } from '../DiagramElements/PortWithExtras/PortWithExtrasModel';
 import { FilterTypeNodeFactory } from '../DiagramElements/FilterType/FilterTypeNodeFactory';
 import { ButtonDecisionNodeFactory } from '../DiagramElements/ButtonDecision/ButtonDecisionNodeFactory';
 import { FilterTypeNodeModel } from '../DiagramElements/FilterType/FilterTypeNodeModel';
@@ -9,7 +10,7 @@ import { ButtonDecisionNodeModel } from '../DiagramElements/ButtonDecision/Butto
 export const initializeDiagramEngine = () => {
     const engine = new SRD.DiagramEngine();
     engine.installDefaultFactories();
-    engine.registerPortFactory(new SimplePortFactory("Process", config => new SRD.DefaultPortModel()));
+    engine.registerPortFactory(new PortWithExtrasFactory("PortWithExtras", config => new PortWithExtrasModel()));
     engine.registerNodeFactory(new FilterTypeNodeFactory());
     engine.registerNodeFactory(new ButtonDecisionNodeFactory());
     const model = new SRD.DiagramModel();
@@ -44,15 +45,26 @@ export const addNode = (model, nodeType) => {
     }
 };
 
-export const getOutLinks = (node) => {
+export const getOutPorts = (node) => getPorts(node, false);
+export const getInPorts = (node) => getPorts(node, true);
+
+export const getPorts = (node, inPort) => {
     return _.keys(node.ports)
-        .filter(portKey => node.ports[portKey].in === false)
-            .keys(node.ports[portKey].links)
+        .filter(portKey => node.ports[portKey].in === inPort)
             .map(portKey => node.ports[portKey]);
 };
 
-export const getInLinks = (node) => {
+export const getNodePortById = (node, portId) => {
+    const portKey = _.keys(node.ports).filter(portKey => node.ports[portKey].id === portId)[0]
+    return node.ports[portKey];
+};
+
+export const getOutLinks = (node) => getLinks(node, false);
+export const getInLinks = (node) => getLinks(node, true);
+
+export const getLinks = (node, inPort) => {
     return _.keys(node.ports)
-        .filter(portKey => node.ports[portKey].in === true)
-            .map(portKey => node.ports[portKey]);
+        .filter(portKey => node.ports[portKey].in === inPort)
+            .map(portKey => _.keys(node.ports[portKey].links)
+                .map(linkKey => node.ports[portKey].links[linkKey]));
 };
