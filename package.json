@@ -8,6 +8,7 @@
     "eslint": "^5.16.0",
     "lodash": "^4.17.11",
     "react": "^16.8.6",
+    "react-color": "^2.17.2",
     "react-dom": "^16.8.6",
     "react-scripts": "3.0.0",
     "semantic-ui-css": "^2.4.1",

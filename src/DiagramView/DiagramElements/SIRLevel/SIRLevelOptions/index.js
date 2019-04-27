@@ -1,8 +1,8 @@
 import React, { Component } from 'react'
 import { Button, Popup } from 'semantic-ui-react';
-import ButtonDecisionPopup from './ButtonDecisionPopup';
+import SIRLevelPopup from './SIRLevelPopup';
 
-export default class ButtonDecisionOptions extends Component {
+export default class SIRLevelOptions extends Component {
     state = {};
 
     handleClose = () => {
@@ -10,14 +10,8 @@ export default class ButtonDecisionOptions extends Component {
     }
 
     render() {
-        // const { activeItem } = this.state;
         const { node /* , node: { type } */ } = this.props;
         const { open } = this.state;
-        // let properties = null;
-        // // console.log(type, this.state);
-        // if (type === 'Process') {
-        //     properties = <ButtonDecisionPopup node={node} onClose={this.handleClose} />;
-        // }
         return (
             <React.Fragment>
                 <Button
@@ -30,13 +24,13 @@ export default class ButtonDecisionOptions extends Component {
                 />
                 <Popup
                     wide="very"
-                    style={{ minWidth: '406px', height: '500px', zIndex: 1000 }}
+                    style={{ minWidth: '406px', /* height: '500px', */ zIndex: 1000 }}
                     open={open}
                     onClose={this.handleClose}
                     context={this.contextRef}
                 >
-                    <Popup.Header>Button Decision Node Properties</Popup.Header>
-                    <ButtonDecisionPopup node={node} onClose={this.handleClose} />
+                    <Popup.Header>SIR Level Node Properties</Popup.Header>
+                    <SIRLevelPopup node={node} onClose={this.handleClose} />
                 </Popup>
             </React.Fragment>
         );

@@ -1,11 +1,11 @@
 import * as React from "react";
 import * as _ from 'lodash';
-import ButtonDecisionOptions from './ButtonDecisionOptions';
+import MultipleChoiceOptions from './MultipleChoiceOptions';
 import { DefaultPortLabel, BaseWidget } from 'storm-react-diagrams';
 
-export class ButtonDecisionNodeWidget extends BaseWidget {
+export class MultipleChoiceNodeWidget extends BaseWidget {
 	constructor(props) {
-		super("ButtonDecision", props);
+		super("MultipleChoice", props);
 		this.state = {};
 	}
 
@@ -36,7 +36,7 @@ export class ButtonDecisionNodeWidget extends BaseWidget {
 						)}
 					</div>
 				</div>
-				<ButtonDecisionOptions node={node} />
+				<MultipleChoiceOptions node={node} />
 			</div>
 		);
 	}

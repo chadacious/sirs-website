@@ -23,6 +23,7 @@ class DiagramView extends React.Component {
                 {diagramEngine &&
                     <DiagramWidget
                         className="srd-canvas"
+                        inverseZoom
                         // smartRouting={true}
                         diagramEngine={diagramEngine}
                     />

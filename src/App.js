@@ -20,7 +20,7 @@ class App extends React.Component {
 
   /* Set the AppContext state */
   setAppState(newState) {
-    console.log('newState', newState);
+    // console.log('newState', newState);
     // const version = this.state.version || newState.version;
     // console.log(newState);
     // if (version) {

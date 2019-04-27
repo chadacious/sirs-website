@@ -1,8 +1,8 @@
 import React, { Component } from 'react'
 import { Button, Popup } from 'semantic-ui-react';
-import ButtonDecisionPopup from './ButtonDecisionPopup';
+import MultipleChoicePopup from './MultipleChoicePopup';
 
-export default class ButtonDecisionOptions extends Component {
+export default class MultipleChoiceOptions extends Component {
     state = {};
 
     handleClose = () => {
@@ -13,11 +13,6 @@ export default class ButtonDecisionOptions extends Component {
         // const { activeItem } = this.state;
         const { node /* , node: { type } */ } = this.props;
         const { open } = this.state;
-        // let properties = null;
-        // // console.log(type, this.state);
-        // if (type === 'Process') {
-        //     properties = <ButtonDecisionPopup node={node} onClose={this.handleClose} />;
-        // }
         return (
             <React.Fragment>
                 <Button
@@ -36,7 +31,7 @@ export default class ButtonDecisionOptions extends Component {
                     context={this.contextRef}
                 >
                     <Popup.Header>Button Decision Node Properties</Popup.Header>
-                    <ButtonDecisionPopup node={node} onClose={this.handleClose} />
+                    <MultipleChoicePopup node={node} onClose={this.handleClose} />
                 </Popup>
             </React.Fragment>
         );

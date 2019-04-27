@@ -2,15 +2,15 @@ import * as _ from "lodash";
 import { NodeModel, Toolkit } from 'storm-react-diagrams';
 import { PortWithExtrasModel } from '../PortWithExtras/PortWithExtrasModel';
 
-export class FilterTypeNodeModel extends NodeModel {
-	constructor(name = "Untitled", color = "rgb(0,192,255)") {
-		super("FilterType");
+export class SIRLevelNodeModel extends NodeModel {
+	constructor(name = "Unknown Level", color = "rgb(0,192,255)") {
+		super("SIRLevel");
 		this.name = name;
 		this.color = color;
 	}
 
-	addOutPort(label) {
-		return this.addPort(new PortWithExtrasModel(false, label, label, Toolkit.UID()));
+	addInPort(label) {
+		return this.addPort(new PortWithExtrasModel(true, label, label, Toolkit.UID()));
 	}
 
 	deSerialize(object, engine) {
@@ -26,9 +26,10 @@ export class FilterTypeNodeModel extends NodeModel {
 		});
 	}
 
-	getOutPorts() {
+	getInPorts() {
 		return _.filter(this.ports, portModel => {
-			return !portModel.in;
+			return portModel.in;
 		});
 	}
+
 }

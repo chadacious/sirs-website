@@ -34,9 +34,15 @@ class DiagramMenu extends Component {
   handleAutoLayoutClick = ()  => {
     const { state: { diagramEngine: engine }, setAppState } = this.props.context;
     const model = engine.getDiagramModel();
-    const distributedModel = this.getDistributedModel(engine, model);
-    // addNodeListeners(distributedModel, this.props.context.state);
-		engine.setDiagramModel(distributedModel);
+    let distributedModel = this.getDistributedModel(engine, model);
+    engine.clearRepaintEntities();
+    engine.setDiagramModel(distributedModel);
+    setAppState({ diagramEngine: engine });
+  }
+
+  handleZoomToFitClick = ()  => {
+    const { state: { diagramEngine: engine }, setAppState } = this.props.context;
+    engine.zoomToFit();
     setAppState({ diagramEngine: engine });
   }
 
@@ -60,30 +66,34 @@ class DiagramMenu extends Component {
     return (
       <React.Fragment>
         <Menu style={{ position: 'absolute', zIndex: 100, minWidth: '100vw' }}>
-          <Dropdown item text='Versions'>
+          <Dropdown item text='File'>
             <Dropdown.Menu>
+              <Dropdown.Item onClick={this.handleNewVersionDialogClick}>New Version</Dropdown.Item>
               <Dropdown.Item onClick={this.handleOpenVersionDialogClick}>Open Version</Dropdown.Item>
               <Dropdown.Item onClick={this.handleSaveVersionClick}>Save Version</Dropdown.Item>
-              <Dropdown.Item>Details</Dropdown.Item>
+              <Dropdown.Divider />
+              <Dropdown.Item>Publish Version</Dropdown.Item>
+              <Dropdown.Item>Version Properties</Dropdown.Item>
+              <Dropdown.Divider />
+              <Dropdown.Item>Exit</Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown>
-          <Dropdown item text='Nodes'>
+          <Dropdown item text='Add Node'>
+              <Dropdown.Menu>
+                <Dropdown.Item onClick={() => this.handleNewNode('FilterType')}>Filter Type Node</Dropdown.Item>
+                <Dropdown.Item onClick={() => this.handleNewNode('ButtonDecision')}>Button Decision Node</Dropdown.Item>
+                <Dropdown.Item onClick={() => this.handleNewNode('MultipleChoice')}>Multiple Choice Node</Dropdown.Item>
+                <Dropdown.Item onClick={() => this.handleNewNode('Message')}>Message Node</Dropdown.Item>
+                <Dropdown.Item onClick={() => this.handleNewNode('SIRLevel')}>SIR Level Node</Dropdown.Item>
+              </Dropdown.Menu>
+          </Dropdown>
+          <Dropdown item text='Tools'>
             <Dropdown.Menu>
-              <Dropdown item text='New'>
-                <Dropdown.Menu>
-                  <Dropdown.Item onClick={() => this.handleNewNode('FilterType')}>Filter Type Node</Dropdown.Item>
-                  <Dropdown.Item onClick={() => this.handleNewNode('ButtonDecision')}>Button Decision Node</Dropdown.Item>
-                  <Dropdown.Item onClick={() => this.handleNewNode('MultipleChoice')}>Multiple Choice Node</Dropdown.Item>
-                  <Dropdown.Item onClick={() => this.handleNewNode('Message')}>Message Node</Dropdown.Item>
-                  <Dropdown.Item onClick={() => this.handleNewNode('SIRLevel')}>SIR Level Node</Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown>
-              <Dropdown.Item>Clone Selection</Dropdown.Item>
+              <Dropdown.Item onClick={this.handleAutoLayoutClick}>Auto-Layout</Dropdown.Item>
+              <Dropdown.Divider />
+              <Dropdown.Item onClick={this.handleZoomToFitClick}>Zoom-to-Fit</Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown>
-          <Menu.Item onClick={this.handleAutoLayoutClick}>
-            Auto-Layout
-          </Menu.Item>
 
           <Menu.Menu position='right'>
             <Menu.Item>

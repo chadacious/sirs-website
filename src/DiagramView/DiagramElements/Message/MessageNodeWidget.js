@@ -1,11 +1,11 @@
 import * as React from "react";
 import * as _ from "lodash";
-import FilterTypeOptions from './FilterTypeOptions';
+import MessageOptions from './MessageOptions';
 import { DefaultPortLabel, BaseWidget } from 'storm-react-diagrams';
 
-export class FilterTypeNodeWidget extends BaseWidget {
+export class MessageNodeWidget extends BaseWidget {
 	constructor(props) {
-		super("FilterType", props);
+		super("Message", props);
 		this.state = {};
 	}
 
@@ -22,12 +22,13 @@ export class FilterTypeNodeWidget extends BaseWidget {
 				<div className={`${classPrefix}__title`} style={{ borderTopRightRadius: '15px', borderTopLeftRadius: '15px' }}>
 					<div className={`${classPrefix}__name`}>{node.name}</div>
 				</div>
-				<div className={`${classPrefix}__ports`} style={{ borderBottomRightRadius: '15px', borderBottomLeftRadius: '15px' }}>
-					<div className={`${classPrefix}__out`}>
-						{_.map(node.getOutPorts(), this.generatePort.bind(this))}
-					</div>
+				<div className={`${classPrefix}__in`}>
+					{_.map(node.getInPorts()
+						.sort((a, b) => a.extras.sortOrder > b.extras.sortOrder ? 1 : -1),
+						this.generatePort.bind(this)
+					)}
 				</div>
-				<FilterTypeOptions node={node} />
+				<MessageOptions node={node} />
 			</div>
 		);
 	}
