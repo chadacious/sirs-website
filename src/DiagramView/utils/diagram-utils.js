@@ -44,13 +44,14 @@ export const addNode = (model, nodeType) => {
     }
 };
 
-export const getOutPorts = (node) => {
+export const getOutLinks = (node) => {
     return _.keys(node.ports)
         .filter(portKey => node.ports[portKey].in === false)
+            .keys(node.ports[portKey].links)
             .map(portKey => node.ports[portKey]);
 };
 
-export const getInPorts = (node) => {
+export const getInLinks = (node) => {
     return _.keys(node.ports)
         .filter(portKey => node.ports[portKey].in === true)
             .map(portKey => node.ports[portKey]);

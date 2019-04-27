@@ -5,6 +5,7 @@
   "dependencies": {
     "dagre": "^0.8.4",
     "dexie": "^2.0.4",
+    "eslint": "^5.16.0",
     "lodash": "^4.17.11",
     "react": "^16.8.6",
     "react-dom": "^16.8.6",

@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import { Form, Tab, Segment, List, Grid, Button, Icon } from 'semantic-ui-react';
 import { withAppContext } from '../../../../AppContext';
-import { getOutPorts } from '../../../utils/diagram-utils';
+import { getOutLinks } from '../../../utils/diagram-utils';
 
 // import { deepFind, updateSIRScale } from '../../utils/helpers';
 // import { updateChecklistItemNodeOutportLabel } from '../../utils/sirScaleToDiagram';
@@ -9,23 +9,29 @@ import { getOutPorts } from '../../../utils/diagram-utils';
 class ProcessProps extends Component {
     state = {
         modNode: {
-            code: '',
             name: '',
-            extras: {},
+            extras: {
+                code: '',
+            },
         },
-        selectedOutPort: {
+        selectedOutLink: {
             code: '',
             name: '',
         },
     };
 
     componentDidMount() {
-        this.setState({ modNode: { ...this.props.node } });
+        this.setState({ modNode: this.props.node });
     }
 
     handleChangeNode = (e, data) => {
         const { name, value } = data;
         this.setState({ modNode: { ...this.state.modNode, [name]: value } });
+    }
+
+    handleChangeNodeExtras = (e, data) => {
+        const { name, value } = data;
+        this.setState({ modNode: { extras: { ...this.state.modNode.extras , [name]: value } } });
     }
 
     handleChoiceChanged = (e, data) => {
@@ -74,21 +80,11 @@ class ProcessProps extends Component {
         const { context: { setAppState, state: { diagramEngine } } } = this.props;
         const { modNode } = this.state;
         const { node } = this.props;
-        // find the original node in the model from that which was sent in via props
         const model = diagramEngine.getDiagramModel()
         const nodes = model.getNodes();
-        // const originalNode = ;
-        console.log(nodes[node.id], modNode);
-        const newNode = nodes[node.id];
-        newNode.id = modNode.id;
-        newNode.name = modNode.name;
-        newNode.extras = modNode.extras;
-        newNode.color = modNode.color;
-
-
-        // Find the item to update in the jsonSIRScale based on the original node.id
-        //   const newJSONSIRScale = updateSIRScale(jsonSIRScale, node.id, sirItem);
-          setAppState({ diagramEngine });
+        // find the original node in the model from that which was sent in via props
+        nodes[node.id] = Object.assign(nodes[node.id], modNode);
+        setAppState({ diagramEngine });
         this.props.onClose();
     }
 
@@ -109,14 +105,14 @@ class ProcessProps extends Component {
 
     render() {
         const { modNode } = this.state;
-        const outPorts = getOutPorts(modNode);
+        const outLinks = getOutLinks(modNode);
         const {
             id,
             name,
             extras: {
+                code,
                 shortName,
                 description,
-                subGroupAcenstry,
             },
         } = modNode;
         const selectedOutPort = this.state.selectedOutPort;
@@ -134,10 +130,10 @@ class ProcessProps extends Component {
             <Form.Input
                 fluid
                 label="Code"
-                name="id"
+                name="code"
                 placeholder="Enter a unique human readable code if desired"
-                value={id}
-                onChange={this.handleChangeNode}
+                value={code}
+                onChange={this.handleChangeNodeExtras}
             />
             </Tab.Pane>
         )},
@@ -152,8 +148,8 @@ class ProcessProps extends Component {
                             <List.Header>{outPort.id}</List.Header>
                             <List.Description>{outPort.label}</List.Description>
                         </List.Content>
-                        {/* <Icon link size="large" name='chevron up' onClick={() => this.handleChoiceMove(choice, -1)} />
-                        <Icon link size="large" name='chevron down' onClick={() => this.handleChoiceMove(choice, 1)} /> */}
+                        <Icon link size="large" name='chevron up' onClick={() => this.handleOutPortMove(outPort, -1)} />
+                        <Icon link size="large" name='chevron down' onClick={() => this.handleOutPortMove(outPort, 1)} />
                         </List.Item>
                     ))}
                     </List>
@@ -197,7 +193,7 @@ class ProcessProps extends Component {
                             label="Quick Select"
                             data-tooltip="Allows for quick selection from the subgroup list when tagging."
                             name="subGroupAcenstry"
-                            value={subGroupAcenstry}
+                            value={selectedOutPort.subGroupAcenstry}
                             onChange={this.handleOutPortChanged}
                             disabled={!selectedOutPort.id} 
                         />
@@ -209,27 +205,39 @@ class ProcessProps extends Component {
         )},
         { menuItem: 'Diagram', render: () => (
             <Tab.Pane>
-            Tab 2 Content
+                Tab 2 Content
             </Tab.Pane>
         )},
         { menuItem: 'More', render: () => (
             <Tab.Pane>
-            <Form.TextArea label="Short Name" name="shortName" placeholder='Enter a shorter version of the question or request...' value={shortName} onChange={this.handleChangeField}/>
-            <Form.TextArea label="Description" name="description" placeholder='Enter a description to offer clarification for the tagger...' value={description} onChange={this.handleChangeField}/>
+                <Form.TextArea
+                    label="Short Name"
+                    name="shortName"
+                    placeholder="Enter a shorter version of the question or request..."
+                    value={shortName}
+                    onChange={this.handleChangeNodeExtras}
+                />
+                <Form.TextArea
+                    label="Description"
+                    name="description"
+                    placeholder="Enter a description to offer clarification for the tagger..."
+                    value={description}
+                    onChange={this.handleChangeNodeExtras}
+                />
             </Tab.Pane>
         )},
         ]
 
         return (
-        <Form>
-            <Tab panes={panes} style={{ height: '380px' }} />
-            <Segment basic compact floated="right">
-            <Form.Group>
-                <Form.Button onClick={this.handleCancel}>Cancel</Form.Button>
-                <Form.Button onClick={this.handleSubmit}>Submit</Form.Button>
-            </Form.Group>
-            </Segment>
-        </Form>
+            <Form>
+                <Tab panes={panes} style={{ height: '380px' }} />
+                <Segment basic compact floated="right">
+                <Form.Group>
+                    <Form.Button onClick={this.handleCancel}>Cancel</Form.Button>
+                    <Form.Button onClick={this.handleSubmit}>Submit</Form.Button>
+                </Form.Group>
+                </Segment>
+            </Form>
         );
     }
 }
