@@ -91,7 +91,6 @@ class DiagramView extends React.Component {
 
     handleZoom = (direction) => {
         const { state: { diagramEngine: engine }, setAppState } = this.props.context;
-        // console.log(values, engine.diagramModel.getZoomLevel());
         engine.diagramModel.setZoomLevel(engine.diagramModel.getZoomLevel() + direction);
         setAppState({ diagramEngine: engine });
     }
