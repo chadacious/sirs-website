@@ -3,8 +3,11 @@ import Dexie from 'dexie';
 const db = new Dexie('sirsDB');
 db.version(1).stores({
     diagram: `
-        version
-        `,
+        revision,
+        filterTypeId,
+        version,
+        [filterTypeId+version+revision]
+    `,
 });
 
 export default db;

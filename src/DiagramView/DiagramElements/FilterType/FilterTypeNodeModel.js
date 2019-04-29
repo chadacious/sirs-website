@@ -1,12 +1,14 @@
 import * as _ from "lodash";
 import { NodeModel, Toolkit } from 'storm-react-diagrams';
 import { PortWithExtrasModel } from '../PortWithExtras/PortWithExtrasModel';
+import { modelChangeEvent } from '../../utils/diagram-utils';
 
 export class FilterTypeNodeModel extends NodeModel {
 	constructor(name = "Untitled", color = "rgb(0,192,255)") {
 		super("FilterType");
 		this.name = name;
 		this.color = color;
+		this.addListener({ selectionChanged: modelChangeEvent });
 	}
 
 	addOutPort(label) {

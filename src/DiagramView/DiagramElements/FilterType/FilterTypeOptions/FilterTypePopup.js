@@ -1,8 +1,8 @@
 import React, { Component } from 'react'
-import { DiagramModel } from 'storm-react-diagrams'
 import { Form, Tab, Segment } from 'semantic-ui-react';
 import DiagramOptions from '../../DiagramOptions';
 import { withAppContext } from '../../../../AppContext';
+import { prepareNewModel, modelChangeEvent } from '../../../utils/diagram-utils';
 
 // Do this to avoid warnings about changing controlled vs uncontrolled state
 const initialState = {
@@ -51,13 +51,14 @@ class FilterTypePopup extends Component {
     }
 
     handleSubmit = () => {
+        modelChangeEvent({ id: 'ButtonDecisionPopup.Submit' });
         this.props.onClose();
     }
 
     handleCancel = () => {
         const { state: { diagramEngine: engine }, setAppState } = this.props.context;
         const { originalDiagram } = this.state;
-        const model = new DiagramModel();
+        const model = prepareNewModel();
         model.deSerializeDiagram(originalDiagram, engine);
         engine.setDiagramModel(model);
         setAppState({ diagramEngine: engine });

@@ -1,7 +1,6 @@
 import React, { Component } from 'react'
-import { DiagramModel } from 'storm-react-diagrams'
 import { Form, Tab, Segment, Radio, Grid } from 'semantic-ui-react';
-import { levelColors } from '../../../utils/diagram-utils';
+import { levelColors, prepareNewModel, modelChangeEvent } from '../../../utils/diagram-utils';
 import { withAppContext } from '../../../../AppContext';
 
 // Do this to avoid warnings about changing controlled vs uncontrolled state
@@ -52,13 +51,14 @@ class SIRLevelPopup extends Component {
     }
 
     handleSubmit = () => {
+        modelChangeEvent({ id: 'ButtonDecisionPopup.Submit' });
         this.props.onClose();
     }
 
     handleCancel = () => {
         const { state: { diagramEngine: engine }, setAppState } = this.props.context;
         const { originalDiagram } = this.state;
-        const model = new DiagramModel();
+        const model = prepareNewModel();
         model.deSerializeDiagram(originalDiagram, engine);
         engine.setDiagramModel(model);
         setAppState({ diagramEngine: engine });

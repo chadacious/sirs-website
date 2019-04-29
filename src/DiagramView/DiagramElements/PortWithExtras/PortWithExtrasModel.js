@@ -1,6 +1,8 @@
 import * as _ from "lodash";
 import { PortModel } from 'storm-react-diagrams';
 import { DefaultLinkModel } from "storm-react-diagrams";
+import { updateOutPortItemLabel } from '../../utils/diagram-utils';
+import { modelChangeEvent } from '../../utils/diagram-utils';
 
 export class PortWithExtrasModel extends PortModel {
     constructor(isInput, name, label = null, id) {
@@ -13,14 +15,14 @@ export class PortWithExtrasModel extends PortModel {
 	deSerialize(object, engine) {
 		super.deSerialize(object, engine);
 		this.in = object.in;
-        this.label = object.label;
+        this.label = object.label ? object.label : updateOutPortItemLabel(object);
         this.extras = object.extras;
 	}
 
 	serialize() {
 		return _.merge(super.serialize(), {
-            in: this.in,
-			label: this.label,
+			in: this.in,
+			label: typeof this.label === 'string' ? this.label : null,
             extras: this.extras,
 		});
 	}
@@ -40,7 +42,13 @@ export class PortWithExtrasModel extends PortModel {
 	}
 
 	createLinkModel() {
-		let link = super.createLinkModel();
-		return link || new DefaultLinkModel();
+		let link = super.createLinkModel() || new DefaultLinkModel();
+		link.addListener({
+			sourcePortChanged: modelChangeEvent,
+			targetPortChanged: modelChangeEvent,
+			selectionChanged: modelChangeEvent,
+			entityRemoved: modelChangeEvent,
+		});
+		return link;
 	}
 }

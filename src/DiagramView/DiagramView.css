@@ -53,3 +53,9 @@
     white-space: nowrap;
     border: 1px solid gray;
 }
+
+input#majorVInput,input#minorVInput,input#patchVInput {
+    text-align: center;
+    margin: 0px auto;
+    width: 5.3em;
+}

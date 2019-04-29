@@ -1,12 +1,14 @@
 import * as _ from "lodash";
 import { NodeModel, Toolkit } from 'storm-react-diagrams';
 import { PortWithExtrasModel } from '../PortWithExtras/PortWithExtrasModel';
+import { modelChangeEvent } from '../../utils/diagram-utils';
 
 export class SIRLevelNodeModel extends NodeModel {
 	constructor(name = "Unknown Level", color = "rgb(0,192,255)") {
 		super("SIRLevel");
 		this.name = name;
 		this.color = color;
+		this.addListener({ selectionChanged: modelChangeEvent });
 	}
 
 	addInPort(label) {
