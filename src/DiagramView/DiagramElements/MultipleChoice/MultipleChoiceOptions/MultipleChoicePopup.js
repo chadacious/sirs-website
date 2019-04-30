@@ -1,6 +1,8 @@
 import React, { Component } from 'react'
+import * as _ from 'lodash';
 import { Form, Tab, Segment, List, Grid, Button, Icon } from 'semantic-ui-react';
-import { levelColors, updateOutPortItemLabel, prepareNewModel, modelChangeEvent } from '../../../utils/diagram-utils';
+// import { log } from '@medlor/medlor-core-lib';
+import { levelColors, updateOutPortItemLabel, prepareNewModel, modelChangeEvent, addNode } from '../../../utils/diagram-utils';
 import DiagramOptions from '../../DiagramOptions';
 import { withAppContext } from '../../../../AppContext';
 
@@ -71,10 +73,50 @@ class MultipleChoicePopup extends Component {
 
     handleChangeOutPortExtras = (e, data) => {
         const { name, value } = data;
+        const { diagramEngine: engine, diagramEngine: { diagramModel: model } } = this.props.context.state;
         const { selectedNode, selectedOutPort } = this.state;
         const outPort = selectedNode.ports[selectedOutPort.id];
+        // For conveniences, we'll update the level node and link for this port
+        if (name === 'level') {
+            let position;
+            // remove any node and link from a previous level assignment
+            // log.trace('outPort', outPort.extras.level);
+            // log.trace('new level', value);
+            if (outPort.extras.level && outPort.extras.level !== value) {
+                // log.trace('removing old level node and link:', outPort.extras.level);
+                const link = model.links[_.keys(outPort.links)[0]];
+                // log.trace('found old link', outPort.links, link);
+                if (link) {
+                    // log.trace('deleting node', link.targetPort.parent);
+                    if (link.targetPort.parent) {
+                        position = { x: link.targetPort.parent.x, y: link.targetPort.parent.y };
+                        model.removeNode(link.targetPort.parent);
+                    }
+                    outPort.removeLink(link);
+                    model.removeLink(link);
+                }
+            }
+            // now add the level node and link it to this port
+            // log.trace('adding level node and link for level', value);
+            const newNode = addNode(engine, 'SIRLevel');
+            newNode.extras.level = value;
+            newNode.name = `Level ${value}`;
+            newNode.color = levelColors[value];
+            if (position) {
+                newNode.x = position.x;
+                newNode.y = position.y;
+            }
+            // log.trace(_.keys(newNode.ports));
+            // log.trace(newNode.ports);
+            // log.trace(newNode.ports[_.keys(newNode.ports)[0]]);
+            const targetPort = newNode.ports[_.keys(newNode.ports)[0]];
+            const link = outPort.link(targetPort);
+            model.addLink(link);
+            // log.trace(newNode);
+            engine.setDiagramModel(model);
+            // log.trace(model);
+        }
         Object.assign(outPort.extras, { [name]: value });
-        // console.log(outPort);
         this.updateState({ selectedNode, selectedOutPort: outPort });
     }
 
@@ -122,7 +164,7 @@ class MultipleChoicePopup extends Component {
             sortOrder: selectedOutPort.extras.items.length + 1,
         };
         selectedOutPort.extras.items.push(newItem);
-        this.updateState({ selectedOutPort });
+        this.updateState({ selectedOutPort, selectedOutPortItem: newItem });
     }
 
     handleOutPortItemSelected = (item) => {
@@ -136,6 +178,13 @@ class MultipleChoicePopup extends Component {
     handleOutPortItemChanged = (e, data) => {
         const { name, value } = data;
         this.updateState({ selectedOutPortItem: Object.assign(this.state.selectedOutPortItem, { [name]: value }) });
+    }
+
+    handleDeleteOutPortItem = (outPortItem) => {
+        const { selectedNode, selectedOutPort } = this.state;
+        const index = selectedOutPort.extras.items.findIndex(item => item.code === outPortItem.code);
+        delete selectedOutPort.extras.items[index];
+        this.updateState({ selectedNode, selectedOutPort });
     }
 
     handleOutPortItemMove = (outPortItem, direction) => {

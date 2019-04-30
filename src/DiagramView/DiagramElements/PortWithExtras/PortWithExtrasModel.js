@@ -8,7 +8,7 @@ export class PortWithExtrasModel extends PortModel {
     constructor(isInput, name, label = null, id) {
 		super(id, "PortWithExtras", id);
 		this.in = isInput;
-        this.label = label || name;
+		this.label = label || name;
         this.extras = { code: name };
 	}
 
@@ -42,7 +42,15 @@ export class PortWithExtrasModel extends PortModel {
 	}
 
 	createLinkModel() {
+		if (!this.isInput) {
+			// Somehow this often doesn't seem to know that there are other links
+			// on this port so this doesn't work consistently
+			super.setMaximumLinks(1);
+		}
+		// console.log('checking links', this.maximumLinks);
+		// console.log(_.keys(this.parent.parent.links).filter(linkKey => this.parent.parent.links[linkKey].sourcePort.id === this.id));
 		let link = super.createLinkModel() || new DefaultLinkModel();
+		link.addLabel(this.label && typeof this.label === 'string' ? this.label : null);
 		link.addListener({
 			sourcePortChanged: modelChangeEvent,
 			targetPortChanged: modelChangeEvent,

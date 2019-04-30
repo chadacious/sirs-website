@@ -3,7 +3,7 @@ import React from 'react';
 import gql from 'graphql-tag';
 import * as _ from 'lodash';
 import * as SRD from 'storm-react-diagrams'
-import { EventSystem } from '@medlor/medlor-core-lib';
+import { EventSystem, log } from '@medlor/medlor-core-lib';
 
 import { PortWithExtrasFactory } from '../DiagramElements/PortWithExtras/PortWithExtrasFactory';
 import { PortWithExtrasModel } from '../DiagramElements/PortWithExtras/PortWithExtrasModel';
@@ -74,7 +74,7 @@ const upsertSIRScaleVersion = gql`
 
 const debounceHandleModelChangeEvents = _.debounce((e) => EventSystem.publish('MODEL_CHANGED_EVENT', e), 250);
 export const modelChangeEvent = (e) => {
-    // console.log('diagram change detected', e);
+    // log.trace('diagram change detected', e);
     debounceHandleModelChangeEvents(e);
 };
 
@@ -190,7 +190,7 @@ export const getRevision = async (filterTypeId, version, revision) => {
 
 export const checkForUnsavedRevision = async (filterTypeId, version) => {
     const lastEntry = await getLatestRevision(filterTypeId, version);
-    if (!lastEntry.savedToServer) {
+    if (lastEntry && !lastEntry.savedToServer) {
         return lastEntry.jsonDefinition;
     }
     return false;
@@ -200,7 +200,7 @@ export const handleModelChanged = (e, context, savedToServer = false) => {
     const { diagramEngine: engine, filterTypeId, version } = context.state;
     if (!filterTypeId || !version) return;
     const jsonDefinition = JSON.stringify(engine.diagramModel.serializeDiagram());
-    // console.log('model changed', jsonDefinition);
+    // log.trace('model changed', e);
     getLatestRevision(filterTypeId, version).then((lastEntry) => {
         const nextRevision = (lastEntry || { revision: 0 }).revision + 1
         db.diagram.put({
@@ -216,49 +216,56 @@ export const handleModelChanged = (e, context, savedToServer = false) => {
         .first((oldestEntry) => {
             const oldestRevision = oldestEntry.revision;
             if (oldestEntry.revision < nextRevision - 25) {
-            db.diagram.where({ filterTypeId, version, revision: oldestRevision }).delete();
+                db.diagram.where({ filterTypeId, version, revision: oldestRevision }).delete();
             }
         });
     });
 };
 
+const calcInitialPosition = (engine) => {
+    return engine.getRelativeMousePoint({ clientX: 200, clientY: 200 });
+};
+
 /**
  * When a node is added, we'll set up the proper node model and define the needed default ports
- * @param {*} model 
+ * @param {*} engine 
  * @param {*} nodeType 
  */
-export const addNode = (model, nodeType) => {
-    // console.log(nodeType);
+export const addNode = (engine, nodeType) => {
+    // console.log(nodeType, model.getOffsetX(), model.getOffsetY());
+    // log.trace('calcInitialPosition', calcInitialPosition(model));
+    const { diagramModel: model } = engine;
+    const { x, y } = calcInitialPosition(engine);
+    let node;
     if (nodeType === 'FilterType') {
-        const node = new FilterTypeNodeModel('No Name', "mediumaquamarine");
-        node.setPosition(100, 100);
+        node = new FilterTypeNodeModel('No Name', "mediumaquamarine");
+        node.setPosition(x, y);
         node.addOutPort("Out").extras.code = "OUT";
         model.addNode(node)
     } else if (nodeType === 'ButtonDecision') {
-        const node = new ButtonDecisionNodeModel('No Name', "green");
-        node.setPosition(175, 100);
+        node = new ButtonDecisionNodeModel('No Name', "green");
+        node.setPosition(x, y);
         node.addInPort("In").extras.code = "IN";
         node.addOutPort("Yes");
         node.addOutPort("No");
         model.addNode(node)
     } else if (nodeType === 'MultipleChoice') {
-        const node = new MultipleChoiceNodeModel('No Name', "yellow");
-        node.setPosition(175, 100);
+        node = new MultipleChoiceNodeModel('No Name', "yellow");
+        node.setPosition(x, y);
         node.addInPort("In").extras.code = "IN";
-        node.addOutPort("Choice 1");
-        node.addOutPort("Choice 2");
         model.addNode(node)
     } else if (nodeType === 'Message') {
-        const node = new MessageNodeModel('No Heading', "orange");
-        node.setPosition(255, 100);
+        node = new MessageNodeModel('No Heading', "orange");
+        node.setPosition(x, y);
         node.addInPort("In").extras.code = "IN";
         model.addNode(node)
     } else if (nodeType === 'SIRLevel') {
-        const node = new SIRLevelNodeModel('Unknown Level', "grey");
-        node.setPosition(425, 100);
+        node = new SIRLevelNodeModel('Unknown Level', "grey");
+        node.setPosition(x, y);
         node.addInPort("In").extras.code = "IN";
         model.addNode(node)
     }
+    return node;
 };
 
 export const updateOutPortItemLabel = (outPort) => {
@@ -285,3 +292,27 @@ export const buildDiagramTitle = (context) => {
     const versionNumber = version;
     return `${filterTypeName} v${versionNumber}`; 
 };
+
+export const getModelReady = (engine, model) => {
+    return new Promise((resolve) => {
+        // log.trace('model', model);
+        const originalZoom = model.getZoomLevel();
+        const originalOffset = { x: model.getOffsetX(), y: model.getOffsetY() };
+        const modelZoomComplete = (e) => {
+            //   log.trace('zoom', e);
+            model.removeListener(e.id);
+            const repaintId = engine.addListener({
+                repaintCanvas: (e) => {
+                    log.trace('repainted', e);
+                    engine.removeListener(repaintId);
+                    resolve({ model, originalZoom, originalOffset });
+                }
+            });
+            engine.repaintCanvas();
+        }
+        model.addListener({
+            zoomUpdated: modelZoomComplete,
+        });
+        model.setZoomLevel(100);
+      });
+}

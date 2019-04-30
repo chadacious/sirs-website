@@ -1,5 +1,6 @@
 import React from 'react'
 import { DiagramModel } from 'storm-react-diagrams';
+import { log } from '@medlor/medlor-core-lib';
 import { Header, Icon, Modal, List, Select, Segment, Button, Confirm, Container } from 'semantic-ui-react'
 import { withAppContext } from '../../AppContext';
 import {
@@ -8,6 +9,7 @@ import {
     addModelListeners,
     checkForUnsavedRevision,
 } from '../utils/diagram-utils';
+import db from '../../IndexedDB';
 
 class OpenVersion extends React.Component {
     state = { unsavedDefinition: null };
@@ -17,6 +19,9 @@ class OpenVersion extends React.Component {
         const { selectedFilterType, version } = this.state;
         const sirScale = versions.filter(v => v.filterTypeId === selectedFilterType && v.version === version)[0];
         const loadedSIRScale = await getSIRScaleDefinition(sirScale.id);
+        // clean out old revisions as they no longer apply
+        log.trace({ selectedFilterType, version });
+        db.diagram.where({ filterTypeId: selectedFilterType, version }).delete();
         return loadedSIRScale.jsonDefinition;
     }
 

@@ -6,7 +6,8 @@ db.version(1).stores({
         revision,
         filterTypeId,
         version,
-        [filterTypeId+version+revision]
+        [filterTypeId+version+revision],
+        [filterTypeId+version]
     `,
 });
 

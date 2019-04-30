@@ -50,12 +50,14 @@ class DiagramView extends React.Component {
             // console.log('loading revision', this.revisionIndex);
             const loadRevision = await getRevision(filterTypeId, version, this.revisionIndex);
             // console.log(loadRevision);
-            const model = new DiagramModel();
-            const { diagramEngine: engine } = this.props.context.state;
-            model.deSerializeDiagram(JSON.parse(loadRevision.jsonDefinition), engine);
-            engine.setDiagramModel(model);
-            addModelListeners(model);
-            this.forceUpdate();
+            if (loadRevision) {
+                const model = new DiagramModel();
+                const { diagramEngine: engine } = this.props.context.state;
+                model.deSerializeDiagram(JSON.parse(loadRevision.jsonDefinition), engine);
+                engine.setDiagramModel(model);
+                addModelListeners(model);
+                this.forceUpdate();
+            }
           }
         }
         if (e.keyCode === 83 && e.ctrlKey) {
@@ -70,7 +72,7 @@ class DiagramView extends React.Component {
         handleModelChanged(e, this.props.context);
         if (e.entity) {
             const { state: { diagramEngine: engine }, setAppState } = this.props.context;
-            console.log(e.entity.zoom);
+            // console.log(e.entity.zoom);
             setAppState({ diagramEngine: engine });
         }
     }
@@ -104,11 +106,12 @@ class DiagramView extends React.Component {
                     <DiagramWidget
                         className="srd-canvas"
                         inverseZoom
+                        maxNumberPointsPerLink={0}
                         diagramEngine={engine}
                     />
                 }
                 <ZoomSlider
-                    values={engine ? [engine.diagramModel.getZoomLevel() || 100] : [100]}
+                    values={engine && engine.diagramModel && engine.diagramModel.getZoomLevel ? [engine.diagramModel.getZoomLevel() || 100] : [100]}
                     onZoomToFit={this.handleZoomToFitClick}
                     onZoomOut={() => this.handleZoom(-1)}
                     onZoomIn={() => this.handleZoom(1)}

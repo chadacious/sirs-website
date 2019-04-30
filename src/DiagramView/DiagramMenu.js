@@ -1,12 +1,12 @@
 import React, { Component } from 'react'
 import { Menu, Dropdown, Button, Modal } from 'semantic-ui-react'
-import * as SRD from 'storm-react-diagrams'
+import { log } from '@medlor/medlor-core-lib';
 import { distributeElements } from "./utils/dagre-utils";
 import { withAppContext } from '../AppContext';
 import OpenVersion from './Dialogs/OpenVersion';
 import NewVersion from './Dialogs/NewVersion';
 
-import { addNode, saveSIRScale } from './utils/diagram-utils';
+import { addNode, saveSIRScale, getModelReady, prepareNewModel } from './utils/diagram-utils';
 import { LoginForm } from '@medlor/medlor-auth-lib';
 import { loadUser, logOut } from '../actions/userActions';
 
@@ -39,17 +39,17 @@ class DiagramMenu extends Component {
   }
 
   handleNewNode = (nodeType) => {
-    const { setAppState, state: { diagramEngine, diagramEngine: { diagramModel: model } } } = this.props.context;
-    addNode(model, nodeType)
+    const { setAppState, state: { diagramEngine } } = this.props.context;
+    addNode(diagramEngine, nodeType)
     setAppState({ diagramEngine });
   }
 
-  handleAutoLayoutClick = ()  => {
+  handleAutoLayoutClick = async ()  => {
     const { state: { diagramEngine: engine }, setAppState } = this.props.context;
-    const model = engine.getDiagramModel();
-    let distributedModel = this.getDistributedModel(engine, model);
+    let distributedModel = await this.getDistributedModel(engine);
     engine.clearRepaintEntities();
     engine.setDiagramModel(distributedModel);
+
     setAppState({ diagramEngine: engine });
   }
 
@@ -75,13 +75,22 @@ class DiagramMenu extends Component {
     });
   }
 
-  getDistributedModel(engine, model) {
-    const serialized = model.serializeDiagram();
+  async getDistributedModel(engine) {
+    // const tempEngine = initializeDiagramEngine();
+    // let model = engine.model;
+    // tempEngine.setDiagramModel(deSerializedModel);
+    const { model, originalZoom, originalOffset } = await getModelReady(engine, engine.getDiagramModel());
+    log.trace('model ready', model, originalZoom, originalOffset);
+    
+    let serialized = model.serializeDiagram();
     const distributedSerializedDiagram = distributeElements(serialized);
 
     //deserialize the model
-    let deSerializedModel = new SRD.DiagramModel();
+    let deSerializedModel = prepareNewModel();
     deSerializedModel.deSerializeDiagram(distributedSerializedDiagram, engine);
+    deSerializedModel.setZoomLevel(originalZoom);
+    deSerializedModel.setOffset(originalOffset.x, originalOffset.y);
+
     return deSerializedModel;
   }
 
