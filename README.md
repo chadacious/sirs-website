@@ -2,4 +2,8 @@
 
 
 ## Docker build command
-docker build -t sirs/sirs-website . --build-arg NPM_TOKEN=19b70e4a-92ba-4f6b-a711-b4684277af4f
+docker build -t chadicus/sirs-website:0.1.0 . --build-arg NPM_TOKEN=
+
+docker push chadicus/sirs-website:0.1.0
+
+kubectl set image deployment/sirs-website sirs-website=chadicus/sirs-website:0.1.0
