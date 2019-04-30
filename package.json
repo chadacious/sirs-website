@@ -2,6 +2,7 @@
   "name": "sirs-website",
   "version": "0.1.0",
   "private": true,
+  "homepage": "./",
   "dependencies": {
     "@medlor/medlor-auth-lib": "^0.6.52",
     "@medlor/medlor-core-lib": "^0.1.35",
@@ -17,6 +18,7 @@
     "react-color": "^2.17.2",
     "react-compound-slider": "^1.2.2",
     "react-dom": "^16.8.6",
+    "react-router-dom": "^5.0.0",
     "react-scripts": "3.0.0",
     "react-toastify": "^5.1.0",
     "semantic-ui-css": "^2.4.1",
