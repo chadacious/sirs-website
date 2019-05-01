@@ -7,6 +7,7 @@ import OpenVersion from './Dialogs/OpenVersion';
 import NewVersion from './Dialogs/NewVersion';
 
 import { addNode, saveSIRScale, getModelReady, prepareNewModel } from './utils/diagram-utils';
+import { diagramToJson } from './utils/diagramToJson';
 import { LoginForm } from '@medlor/medlor-auth-lib';
 import { loadUser, logOut } from '../actions/userActions';
 
@@ -36,6 +37,12 @@ class DiagramMenu extends Component {
     const { state: { diagramEngine, sirScaleId: id } } = this.props.context;
     const jsonDefinition = JSON.stringify(diagramEngine.diagramModel.serializeDiagram());
     saveSIRScale(this.props.context, id, { jsonDefinition });
+  }
+
+  handlePublishVersionClick = () => {
+    const { state: { diagramEngine: { diagramModel: model } } } = this.props.context;
+    const jsonSIRScale = diagramToJson(model);
+    log.trace(jsonSIRScale);
   }
 
   handleNewNode = (nodeType) => {
@@ -120,7 +127,7 @@ class DiagramMenu extends Component {
               <Dropdown.Item onClick={this.handleOpenVersionDialogClick}>Open Version</Dropdown.Item>
               <Dropdown.Item onClick={this.handleSaveVersionClick}>Save Version</Dropdown.Item>
               <Dropdown.Divider />
-              <Dropdown.Item>Publish Version</Dropdown.Item>
+              <Dropdown.Item onClick={this.handlePublishVersionClick}>Publish Version</Dropdown.Item>
               <Dropdown.Item>Version Properties</Dropdown.Item>
               <Dropdown.Divider />
               <Dropdown.Item>Exit</Dropdown.Item>
