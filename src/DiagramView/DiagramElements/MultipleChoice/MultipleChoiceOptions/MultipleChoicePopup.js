@@ -2,7 +2,7 @@ import React, { Component } from 'react'
 import * as _ from 'lodash';
 import { Form, Tab, Segment, List, Grid, Button, Icon } from 'semantic-ui-react';
 // import { log } from '@medlor/medlor-core-lib';
-import { levelColors, updateOutPortItemLabel, prepareNewModel, modelChangeEvent, addNode } from '../../../utils/diagram-utils';
+import { levelColors, updateOutPortItemLabel, prepareNewModel, modelChangeEvent, addNode, assignUndefined } from '../../../utils/diagram-utils';
 import DiagramOptions from '../../DiagramOptions';
 import { withAppContext } from '../../../../AppContext';
 
@@ -20,12 +20,15 @@ const initialState = {
         label: '',
         extras: {
             code: '',
+            shortName: '',
             level: null,
         },
     },
     selectedOutPortItem: {
         code: '',
         name: '',
+        shortName: '',
+        sortOrder: '',
     },
     editingCheckListItems: false,
 };
@@ -59,8 +62,9 @@ class MultipleChoicePopup extends Component {
     }
 
     handleOutPortSelected = (outPort) => {
-        // console.log(outPort);
-        this.updateState({ selectedOutPort: outPort });
+        // use the assignUndefined to initialize the object in case we add new properties to item. This way they will be loaded with initialState if the property is undefined
+        // and we can avoid the error about changing a uncontrolled component to controlled component.
+        this.updateState({ selectedOutPort: { ...assignUndefined(outPort, initialState.selectedOutPort), extras: assignUndefined(outPort.extras, initialState.selectedOutPort.extras) } });
     }
 
     handleChangeOutPort = (e, data) => {
@@ -128,7 +132,8 @@ class MultipleChoicePopup extends Component {
 
     handleNewOutPortClick = () => {
         const { selectedNode } = this.state;
-        const outPort = selectedNode.addOutPort("Untitled");
+        let outPort = selectedNode.addOutPort("Untitled");
+        outPort = { ...assignUndefined(outPort, initialState.selectedOutPort), extras: assignUndefined(outPort.extras, initialState.selectedOutPort.extras) };
         outPort.extras.code = Math.random().toString(36).substring(7);
         outPort.extras.sortOrder = selectedNode.getOutPorts().length;
         this.updateState({ selectedNode, selectedOutPort: outPort });
@@ -157,18 +162,19 @@ class MultipleChoicePopup extends Component {
     handleNewOutPortItemClick = () => {
         const { selectedOutPort } = this.state;
         if (!selectedOutPort.extras.items) selectedOutPort.extras.items = [];
-        const newItem = {
+        const newItem = assignUndefined({
             id: Math.random().toString(36).substring(7),
             code: Math.random().toString(36).substring(7),
-            name: '',
             sortOrder: selectedOutPort.extras.items.length + 1,
-        };
+        }, initialState.selectedOutPortItem);
         selectedOutPort.extras.items.push(newItem);
         this.updateState({ selectedOutPort, selectedOutPortItem: newItem });
     }
 
     handleOutPortItemSelected = (item) => {
-        this.updateState({ selectedOutPortItem: item });
+        // use the assignUndefined to initialize the object in case we add new properties to item. This way they will be loaded with initialState if the property is undefined
+        // and we can avoid the error about changing a uncontrolled component to controlled component.
+        this.updateState({ selectedOutPortItem: assignUndefined(item, initialState.selectedOutPortItem) });
     }
     
     handleCloseOutPortItems = () => {
@@ -198,7 +204,6 @@ class MultipleChoicePopup extends Component {
             if (checkPortItem.id === outPortItem.id) checkPortItem.sortOrder = newSortOrder;
             else if (checkPortItem.sortOrder === newSortOrder) checkPortItem.sortOrder = newSortOrder + (-1 * direction);
         });
-        console.log(outPortItems);
         this.updateState({
             selectedNode,
             selectedOutPort,
@@ -262,7 +267,7 @@ class MultipleChoicePopup extends Component {
             <Tab.Pane>
                 {editingCheckListItems === false &&
                 <React.Fragment>
-                    <Segment style={{overflow: 'auto', height: '255px' }}>
+                    <Segment style={{overflow: 'auto', height: '210px' }}>
                         <List selection verticalAlign='middle' celled size="mini">
                             <List.Item onClick={this.handleNewOutPortClick}>
                                 <List.Content style={{ textAlign: 'center' }}>
@@ -288,7 +293,7 @@ class MultipleChoicePopup extends Component {
                         <Grid>
                             <Grid.Row style={{ paddingTop: '0.75em', paddingBottom: '0.75em' }}>
                                 <Grid.Column width={3} textAlign='right' style={{ padding: '0', paddingTop: '0.3em' }}>
-                                Level:
+                                    Level:
                                 </Grid.Column>
                                 <Grid.Column width={6}>
                                     <Form.Select
@@ -313,13 +318,28 @@ class MultipleChoicePopup extends Component {
                                     </Button>
                                 </Grid.Column>
                             </Grid.Row> 
+                            <Grid.Row style={{ paddingTop: 0, paddingBottom: '0.75em' }}>
+                                <Grid.Column width={3} textAlign='right' style={{ padding: '0', paddingTop: '0.3em' }}>
+                                    Short Name:
+                                </Grid.Column>
+                                <Grid.Column width={13}>
+                                    <Form.Input
+                                        fluid
+                                        name="shortName"
+                                        placeholder='Enter a shorter name for tight displays'
+                                        value={selectedOutPort.extras.shortName}
+                                        disabled={!selectedOutPort.id}
+                                        onChange={this.handleChangeOutPortExtras}
+                                    />
+                                </Grid.Column>
+                            </Grid.Row> 
                         </Grid>             
                     </Segment>
                 </React.Fragment>
                 }
                 {editingCheckListItems &&
                 <React.Fragment>
-                    <Segment style={{overflow: 'auto', height: 213 }}>
+                    <Segment style={{overflow: 'auto', height: 195 }}>
                     <List selection size="mini">
                         <List.Item onClick={this.handleNewOutPortItemClick}>
                             <List.Content style={{ textAlign: 'center' }}>
@@ -363,7 +383,7 @@ class MultipleChoicePopup extends Component {
                                     />
                                 </Grid.Column>
                             </Grid.Row>
-                            <Grid.Row style={{ paddingTop: '0.75em', paddingBottom: '0.75em' }}>
+                            <Grid.Row style={{ paddingTop: 0, paddingBottom: '0.75em' }}>
                                 <Grid.Column width={4} textAlign='right' style={{ padding: '0', paddingTop: '0.3em' }}>
                                 Checkbox Text:
                                 </Grid.Column>
@@ -378,6 +398,21 @@ class MultipleChoicePopup extends Component {
                                     />
                                 </Grid.Column>
                             </Grid.Row>
+                            <Grid.Row style={{ paddingTop: 0, paddingBottom: '0.75em' }}>
+                                <Grid.Column width={4} textAlign='right' style={{ padding: '0', paddingTop: '0.3em' }}>
+                                    Short Name:
+                                </Grid.Column>
+                                <Grid.Column width={12}>
+                                    <Form.Input
+                                        fluid
+                                        name="shortName"
+                                        placeholder='Enter a short name for tight displays'
+                                        value={selectedOutPortItem.shortName}
+                                        disabled={!selectedOutPortItem.code}
+                                        onChange={this.handleOutPortItemChanged}
+                                    />
+                                </Grid.Column>
+                            </Grid.Row> 
                         </Grid>
                     </Segment>
                 </React.Fragment>

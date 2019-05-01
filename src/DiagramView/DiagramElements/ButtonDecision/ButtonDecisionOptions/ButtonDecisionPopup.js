@@ -2,7 +2,7 @@ import React, { Component } from 'react'
 import { Form, Tab, Segment, List, Grid, Button, Icon } from 'semantic-ui-react';
 import DiagramOptions from '../../DiagramOptions';
 import { withAppContext } from '../../../../AppContext';
-import { prepareNewModel, modelChangeEvent } from '../../../utils/diagram-utils';
+import { prepareNewModel, modelChangeEvent, assignUndefined } from '../../../utils/diagram-utils';
 
 // Do this to avoid warnings about changing controlled vs uncontrolled state
 const initialState = {
@@ -18,6 +18,7 @@ const initialState = {
         label: '',
         extras: {
             code: '',
+            shortName: '',
             quickSelect: false,
         },
     },
@@ -52,7 +53,9 @@ class ButtonDecisionPopup extends Component {
     }
 
     handleOutPortSelected = (outPort) => {
-        this.updateState({ selectedOutPort: outPort });
+        // use the assignUndefined to initialize the object in case we add new properties to item. This way they will be loaded with initialState if the property is undefined
+        // and we can avoid the error about changing a uncontrolled component to controlled component.
+        this.updateState({ selectedOutPort: { ...assignUndefined(outPort, initialState.selectedOutPort), extras: assignUndefined(outPort.extras, initialState.selectedOutPort.extras) } });
     }
 
     handleChangeOutPort = (e, data) => {
@@ -79,7 +82,8 @@ class ButtonDecisionPopup extends Component {
 
     handleNewOutPortClick = () => {
         const { selectedNode } = this.state;
-        const outPort = selectedNode.addOutPort("Untitled");
+        let outPort = selectedNode.addOutPort("Untitled");
+        outPort = { ...assignUndefined(outPort, initialState.selectedOutPort), extras: assignUndefined(outPort.extras, initialState.selectedOutPort.extras) };
         outPort.extras.code = Math.random().toString(36).substring(7);
         outPort.extras.sortOrder = selectedNode.getOutPorts().length;
         this.updateState({ selectedNode, selectedOutPort: outPort });
@@ -183,7 +187,7 @@ class ButtonDecisionPopup extends Component {
                             <Grid.Column width={4} textAlign='right' style={{ padding: '0', paddingTop: '0.3em' }}>
                             Code:
                             </Grid.Column>
-                            <Grid.Column width={12}>
+                            <Grid.Column width={6}>
                                 <Form.Input
                                     fluid
                                     name="code"
@@ -193,8 +197,18 @@ class ButtonDecisionPopup extends Component {
                                     onChange={this.handleChangeOutPortExtras}
                                 />
                             </Grid.Column>
+                            <Grid.Column width={6} style={{ paddingTop: '0.5em' }}>
+                                <Form.Checkbox
+                                    label="Quick Select"
+                                    data-tooltip="Allows for quick selection from a subgroup list when tagging."
+                                    name="quickSelect"
+                                    checked={selectedOutPort.extras.quickSelect ? true : false}
+                                    onChange={(e, { name, checked }) => this.handleChangeOutPortExtras(e, { name, value: checked })}
+                                    disabled={!selectedOutPort.id} 
+                                />
+                            </Grid.Column>
                         </Grid.Row>
-                        <Grid.Row style={{ paddingTop: '0.75em', paddingBottom: '0.75em' }}>
+                        <Grid.Row style={{ paddingTop: 0, paddingBottom: '0.75em' }}>
                             <Grid.Column width={4} textAlign='right' style={{ padding: '0', paddingTop: '0.3em' }}>
                             Button Text:
                             </Grid.Column>
@@ -209,19 +223,21 @@ class ButtonDecisionPopup extends Component {
                                 />
                             </Grid.Column>
                         </Grid.Row>
-                        <Grid.Row  style={{ paddingTop: '0.75em', paddingBottom: '0.75em' }}>
-                            <Grid.Column width={4} />
+                        <Grid.Row style={{ paddingTop: 0, paddingBottom: '0.75em' }}>
+                            <Grid.Column width={4} textAlign='right' style={{ padding: '0', paddingTop: '0.3em' }}>
+                                Short Name:
+                            </Grid.Column>
                             <Grid.Column width={12}>
-                                <Form.Checkbox
-                                    label="Quick Select"
-                                    data-tooltip="Allows for quick selection from a subgroup list when tagging."
-                                    name="quickSelect"
-                                    checked={selectedOutPort.extras.quickSelect ? true : false}
-                                    onChange={(e, { name, checked }) => this.handleChangeOutPortExtras(e, { name, value: checked })}
-                                    disabled={!selectedOutPort.id} 
+                                <Form.Input
+                                    fluid
+                                    name="shortName"
+                                    placeholder='Enter a shorter name for tight displays'
+                                    value={selectedOutPort.extras.shortName}
+                                    disabled={!selectedOutPort.id}
+                                    onChange={this.handleChangeOutPortExtras}
                                 />
                             </Grid.Column>
-                        </Grid.Row>
+                        </Grid.Row> 
                     </Grid>
                 </Segment>
             </Tab.Pane>

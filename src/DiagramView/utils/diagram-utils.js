@@ -315,4 +315,16 @@ export const getModelReady = (engine, model) => {
         });
         model.setZoomLevel(100);
       });
-}
+};
+
+export const assignUndefined = (target, ...sources) => {
+    for (const source of sources) {
+        for (const key of Object.keys(source)) {
+            const val = target[key];
+            if (val === undefined) {
+                target[key] = source[key];
+            }
+        }
+    }
+    return target;
+};
