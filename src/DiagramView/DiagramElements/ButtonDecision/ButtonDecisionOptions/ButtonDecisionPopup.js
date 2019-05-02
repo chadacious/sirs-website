@@ -1,4 +1,5 @@
 import React, { Component } from 'react'
+import * as _ from 'lodash';
 import { Form, Tab, Segment, List, Grid, Button, Icon } from 'semantic-ui-react';
 import DiagramOptions from '../../DiagramOptions';
 import { withAppContext } from '../../../../AppContext';
@@ -9,7 +10,6 @@ const initialState = {
     selectedNode: {
         name: '',
         extras: {
-            code: '',
             shortName: '',
             description: '',
         },
@@ -17,7 +17,6 @@ const initialState = {
     selectedOutPort: {
         label: '',
         extras: {
-            code: '',
             shortName: '',
             quickSelect: false,
         },
@@ -77,6 +76,15 @@ class ButtonDecisionPopup extends Component {
     handleDeleteOutPort = (outPort) => {
         const { selectedNode } = this.state;
         delete selectedNode.ports[outPort.id];
+        
+        const ports = _.keys(selectedNode.ports).map(portKey => selectedNode.ports[portKey]);
+        let index = 1;
+        ports.filter(port => !port.in).sort((a, b) => a.extras.sortOrder > b.extras.sortOrder ? 1 : -1)
+            .forEach((port) => {
+                selectedNode.ports[port.id] = Object.assign(port, { extras: { ...port.extras, sortOrder: index } });
+                index += 1;
+            });
+        
         this.updateState({ selectedNode, selectedOutPort: { ...initialState.selectedOutPort } });
     }
 
@@ -84,7 +92,6 @@ class ButtonDecisionPopup extends Component {
         const { selectedNode } = this.state;
         let outPort = selectedNode.addOutPort("Untitled");
         outPort = { ...assignUndefined(outPort, initialState.selectedOutPort), extras: assignUndefined(outPort.extras, initialState.selectedOutPort.extras) };
-        outPort.extras.code = Math.random().toString(36).substring(7);
         outPort.extras.sortOrder = selectedNode.getOutPorts().length;
         this.updateState({ selectedNode, selectedOutPort: outPort });
     }
@@ -126,11 +133,12 @@ class ButtonDecisionPopup extends Component {
 
     render() {
         const { selectedNode } = this.state;
+        const { diagramLocked } = this.props.context.state;
+
         const outPorts = selectedNode.getOutPorts ? selectedNode.getOutPorts() : [];
         const {
             name,
             extras: {
-                code = '',
                 shortName = '',
                 description = '',
             },
@@ -140,28 +148,21 @@ class ButtonDecisionPopup extends Component {
         const panes = [
         { menuItem: 'Prompt', render: () => (
             <Tab.Pane>
-            <Form.TextArea
-                label="Question or Request"
-                name="name"
-                placeholder="Enter the question or request..."
-                value={name}
-                onChange={this.handleChangeNode}
-            />
-            <Form.Input
-                fluid
-                label="Code"
-                name="code"
-                placeholder="Enter a unique human readable code if desired"
-                value={code}
-                onChange={this.handleChangeNodeExtras}
-            />
+                <Form.TextArea
+                    label="Question or Request"
+                    name="name"
+                    disabled={diagramLocked}
+                    placeholder="Enter the question or request..."
+                    value={name}
+                    onChange={this.handleChangeNode}
+                />
             </Tab.Pane>
         )},
         { menuItem: 'Outcomes', render: () => (
             <Tab.Pane>
-                <Segment style={{overflow: 'auto', height: '175px' }}>
+                <Segment disabled={diagramLocked} style={{overflow: 'auto', height: '175px' }}>
                     <List selection verticalAlign='middle' celled size="mini">
-                        <List.Item onClick={this.handleNewOutPortClick}>
+                        <List.Item disabled={diagramLocked} onClick={this.handleNewOutPortClick}>
                             <List.Content style={{ textAlign: 'center' }}>
                                 <Button color="green">Create New Outcome</Button>
                             </List.Content>
@@ -170,13 +171,13 @@ class ButtonDecisionPopup extends Component {
                             .sort((a, b) => a.extras.sortOrder > b.extras.sortOrder ? 1 : -1)
                             .map((outPort) => (
                         <List.Item key={outPort.id} onClick={() => {this.handleOutPortSelected(outPort)}}>
-                        <Icon link name='trash' onClick={() => this.handleDeleteOutPort(outPort)} />
+                        <Icon disabled={diagramLocked} link name='trash' onClick={() => this.handleDeleteOutPort(outPort)} />
                         <List.Content>
-                            <List.Header>{outPort.extras.code}</List.Header>
-                            <List.Description>{outPort.label}</List.Description>
+                            <List.Header>{outPort.extras.shortName || outPort.label}</List.Header>
+                            {outPort.extras.shortName && <List.Description>{outPort.label}</List.Description>}
                         </List.Content>
-                        <Icon link size="large" name='chevron up' onClick={() => this.handleOutPortMove(outPort, -1)} />
-                        <Icon link size="large" name='chevron down' onClick={() => this.handleOutPortMove(outPort, 1)} />
+                        <Icon disabled={diagramLocked} link size="large" name='chevron up' onClick={() => this.handleOutPortMove(outPort, -1)} />
+                        <Icon disabled={diagramLocked} link size="large" name='chevron down' onClick={() => this.handleOutPortMove(outPort, 1)} />
                         </List.Item>
                         ))}
                     </List>
@@ -185,26 +186,15 @@ class ButtonDecisionPopup extends Component {
                     <Grid>
                         <Grid.Row style={{ paddingTop: '0.75em', paddingBottom: '0.75em' }}>
                             <Grid.Column width={4} textAlign='right' style={{ padding: '0', paddingTop: '0.3em' }}>
-                            Code:
                             </Grid.Column>
-                            <Grid.Column width={6}>
-                                <Form.Input
-                                    fluid
-                                    name="code"
-                                    placeholder='Assign a human readable code'
-                                    value={selectedOutPort.extras.code}
-                                    disabled={!selectedOutPort.id}
-                                    onChange={this.handleChangeOutPortExtras}
-                                />
-                            </Grid.Column>
-                            <Grid.Column width={6} style={{ paddingTop: '0.5em' }}>
+                            <Grid.Column width={12} style={{ paddingTop: '0.5em' }}>
                                 <Form.Checkbox
                                     label="Quick Select"
                                     data-tooltip="Allows for quick selection from a subgroup list when tagging."
                                     name="quickSelect"
                                     checked={selectedOutPort.extras.quickSelect ? true : false}
                                     onChange={(e, { name, checked }) => this.handleChangeOutPortExtras(e, { name, value: checked })}
-                                    disabled={!selectedOutPort.id} 
+                                    disabled={!selectedOutPort.id || diagramLocked}
                                 />
                             </Grid.Column>
                         </Grid.Row>
@@ -218,7 +208,7 @@ class ButtonDecisionPopup extends Component {
                                     name="label"
                                     placeholder='Enter the button text'
                                     value={selectedOutPort.label}
-                                    disabled={!selectedOutPort.id}
+                                    disabled={!selectedOutPort.id || diagramLocked}
                                     onChange={this.handleChangeOutPort}
                                 />
                             </Grid.Column>
@@ -233,7 +223,7 @@ class ButtonDecisionPopup extends Component {
                                     name="shortName"
                                     placeholder='Enter a shorter name for tight displays'
                                     value={selectedOutPort.extras.shortName}
-                                    disabled={!selectedOutPort.id}
+                                    disabled={!selectedOutPort.id || diagramLocked}
                                     onChange={this.handleChangeOutPortExtras}
                                 />
                             </Grid.Column>
@@ -244,7 +234,7 @@ class ButtonDecisionPopup extends Component {
         )},
         { menuItem: 'Diagram', render: () => (
             <Tab.Pane>
-                <DiagramOptions node={selectedNode} onUpdate={this.handleDiagramOptionsUpdate} />
+                <DiagramOptions disabled={diagramLocked} node={selectedNode} onUpdate={this.handleDiagramOptionsUpdate} />
             </Tab.Pane>
         )},
         { menuItem: 'More', render: () => (
@@ -254,6 +244,7 @@ class ButtonDecisionPopup extends Component {
                     name="shortName"
                     placeholder="Enter a shorter version of the question or request..."
                     value={shortName}
+                    disabled={diagramLocked}
                     onChange={this.handleChangeNodeExtras}
                 />
                 <Form.TextArea
@@ -261,6 +252,7 @@ class ButtonDecisionPopup extends Component {
                     name="description"
                     placeholder="Enter a description to offer clarification for the tagger..."
                     value={description}
+                    disabled={diagramLocked}
                     onChange={this.handleChangeNodeExtras}
                 />
             </Tab.Pane>
@@ -272,8 +264,8 @@ class ButtonDecisionPopup extends Component {
                 <Tab panes={panes} style={{ height: '380px' }} />
                 <Segment basic compact floated="right">
                 <Form.Group>
-                    <Form.Button secondary onClick={this.handleCancel}>Undo Changes</Form.Button>
-                    <Form.Button primary onClick={this.handleSubmit}>Done</Form.Button>
+                    <Form.Button secondary onClick={this.handleCancel}>{diagramLocked ? 'Close' : 'Undo Changes'}</Form.Button>
+                    {!diagramLocked && <Form.Button primary onClick={this.handleSubmit}>Done</Form.Button>}
                 </Form.Group>
                 </Segment>
             </Form>

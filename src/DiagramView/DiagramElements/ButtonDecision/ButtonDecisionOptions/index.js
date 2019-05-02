@@ -1,8 +1,11 @@
 import React, { Component } from 'react'
 import { Button, Popup } from 'semantic-ui-react';
+// import { log } from '@medlor/medlor-core-lib';
+import { withAppContext } from '../../../../AppContext';
+
 import ButtonDecisionPopup from './ButtonDecisionPopup';
 
-export default class ButtonDecisionOptions extends Component {
+class ButtonDecisionOptions extends Component {
     state = {};
 
     handleClose = () => {
@@ -10,14 +13,8 @@ export default class ButtonDecisionOptions extends Component {
     }
 
     render() {
-        // const { activeItem } = this.state;
-        const { node /* , node: { type } */ } = this.props;
+        const { node } = this.props;
         const { open } = this.state;
-        // let properties = null;
-        // // console.log(type, this.state);
-        // if (type === 'Process') {
-        //     properties = <ButtonDecisionPopup node={node} onClose={this.handleClose} />;
-        // }
         return (
             <React.Fragment>
                 <Button
@@ -42,3 +39,5 @@ export default class ButtonDecisionOptions extends Component {
         );
     }
 }
+
+export default withAppContext(ButtonDecisionOptions);

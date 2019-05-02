@@ -11,30 +11,44 @@ import {
 } from '../utils/diagram-utils';
 import db from '../../IndexedDB';
 
+const initialState = {
+    selectedFilterType: null,
+    unsavedDefinition: null,
+    versions: null,
+    version: null,
+};
+
 class OpenVersion extends React.Component {
-    state = { unsavedDefinition: null };
+    state = initialState;
 
     loadFromServer = async () => {
-        const { state: { versions } } = this.props.context;
-        const { selectedFilterType, version } = this.state;
+        const { selectedFilterType, version, versions } = this.state;
         const sirScale = versions.filter(v => v.filterTypeId === selectedFilterType && v.version === version)[0];
         const loadedSIRScale = await getSIRScaleDefinition(sirScale.id);
         // clean out old revisions as they no longer apply
         log.trace({ selectedFilterType, version });
         db.diagram.where({ filterTypeId: selectedFilterType, version }).delete();
-        return loadedSIRScale.jsonDefinition;
+        let diagramLocked = false;
+        if (loadedSIRScale.publishedAt) {
+            log.trace('loadedSIRScale.publishedAt', new Date(loadedSIRScale.publishedAt));
+            diagramLocked = new Date(loadedSIRScale.publishedAt) < new Date();
+        }
+        return { diagramLocked, ...loadedSIRScale };
     }
 
     loadFromIndexedDB = async () => {
         return this.state.unsavedDefinition;
     }
 
-    loadIntoDiagram = (jsonDefinition) => {
-        const { setAppState, state: { diagramEngine: engine, versions } } = this.props.context;
-        const { selectedFilterType, version } = this.state;
+    loadIntoDiagram = (definition) => {
+        const { setAppState, state: { diagramEngine: engine } } = this.props.context;
+        const { selectedFilterType, version, versions } = this.state;
         const sirScale = versions.filter(v => v.filterTypeId === selectedFilterType && v.version === version)[0];
         const model = new DiagramModel();
-        model.deSerializeDiagram(JSON.parse(jsonDefinition), engine);
+        const { serializedDiagram, diagramLocked, description } = definition;
+        model.deSerializeDiagram(JSON.parse(serializedDiagram), engine);
+        console.log('diagramLocked', diagramLocked);
+        if (diagramLocked) model.setLocked(diagramLocked);
         engine.setDiagramModel(model);
         addModelListeners(model);
         setAppState({
@@ -43,13 +57,17 @@ class OpenVersion extends React.Component {
             sirScaleId: sirScale.id,
             filterTypeId: selectedFilterType, 
             version,
+            versions,
+            description,
+            diagramLocked,
         });
+        this.setState(initialState);
     }
 
     handleOpenVersion = (version, onClose) => {
         const { setAppState } = this.props.context;
         const { selectedFilterType } = this.state;
-        this.setState({ version }, async () => {
+        this.setState({ version, revisionIndex: 0 }, async () => {
             try {
                 setAppState({ loadingVersion: true, loadError: null });
                 // check if there was an unsaved revision of this version in the indexedDB
@@ -57,8 +75,9 @@ class OpenVersion extends React.Component {
                 if (unsavedDefinition) {
                     this.setState({ unsavedDefinition });
                 } else {
-                    const jsonDefinition = await this.loadFromServer();
-                    this.loadIntoDiagram(jsonDefinition);
+                    const definition = await this.loadFromServer();
+                    log.trace('loading into diagram', definition);
+                    this.loadIntoDiagram(definition);
                     onClose();
                 }
             } catch (error) {
@@ -67,34 +86,34 @@ class OpenVersion extends React.Component {
         });
     }
 
-    handleFilterTypeChanged = (e, { value }) => {
+    handleFilterTypeChanged = async (e, { value }) => {
         const { setAppState } = this.props.context;
-        getFitlerTypeSIRScaleVersions(value, setAppState);
-        this.setState({ selectedFilterType: value })
+        const versions = await getFitlerTypeSIRScaleVersions(value, setAppState);
+        log.trace('versions', versions);
+        this.setState({ selectedFilterType: value, versions })
     }
 
     handleCancelUnsavedVersion = async () => {
-        const jsonDefinition = await this.loadFromServer();
-        this.loadIntoDiagram(jsonDefinition);
+        const definition = await this.loadFromServer();
+        this.loadIntoDiagram(definition);
         this.setState({ unsavedDefinition: null });
         this.props.onClose();
     }
 
     handleConfirmUnsavedVersion = async () => {
-        const jsonDefinition = await this.loadFromIndexedDB();
-        this.loadIntoDiagram(jsonDefinition);
+        const serializedDiagram = await this.loadFromIndexedDB();
+        this.loadIntoDiagram({ serializedDiagram });
         this.setState({ unsavedDefinition: null });
         this.props.onClose();
     }
 
     render() {
         const { open, onClose } = this.props;
-        const { selectedFilterType, unsavedDefinition } = this.state;
+        const { versions, selectedFilterType, unsavedDefinition } = this.state;
         const { filterTypes } = this.props.context.state;
         const filterTypeOptions = (filterTypes || []).map(ft => (
             { key: ft.code, text: ft.name, value: ft.id }
         ));
-        const { versions } = this.props.context.state;
         if (unsavedDefinition !== null) {
             return (
                 <Confirm

@@ -8,7 +8,6 @@ const initialState = {
     selectedNode: {
         name: '',
         extras: {
-            code: '',
             message: '',
         },
     },
@@ -67,6 +66,8 @@ class SIRLevelPopup extends Component {
 
     render() {
         const { selectedNode } = this.state;
+        const { diagramLocked } = this.props.context.state;
+
         const levels = [1, 2, 3, 4];
 
         const panes = [
@@ -80,10 +81,11 @@ class SIRLevelPopup extends Component {
                                     const levelSelected = selectedNode.extras.level === level + offset;
                                     const currentLevel = level + offset;
                                     return (
-                                    <Segment color={levelColors[currentLevel]} inverted={levelSelected}>
+                                    <Segment disabled={diagramLocked} color={levelColors[currentLevel]} inverted={levelSelected}>
                                         <Radio
                                             label={`Level ${level + offset}`}
                                             name="levelGroup"
+                                            disabled={diagramLocked}
                                             slider
                                             color="green"
                                             value={level + offset}
@@ -111,8 +113,8 @@ class SIRLevelPopup extends Component {
                 <Tab panes={panes} />
                 <Segment basic compact floated="right">
                 <Form.Group>
-                    <Form.Button secondary onClick={this.handleCancel}>Undo Changes</Form.Button>
-                    <Form.Button primary onClick={this.handleSubmit}>Done</Form.Button>
+                    <Form.Button secondary onClick={this.handleCancel}>{diagramLocked ? 'Close' : 'Undo Changes'}</Form.Button>
+                    {!diagramLocked && <Form.Button primary onClick={this.handleSubmit}>Done</Form.Button>}
                 </Form.Group>
                 </Segment>
             </Form>

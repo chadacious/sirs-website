@@ -9,7 +9,7 @@ export class PortWithExtrasModel extends PortModel {
 		super(id, "PortWithExtras", id);
 		this.in = isInput;
 		this.label = label || name;
-        this.extras = { code: name };
+        this.extras = {};
 	}
 
 	deSerialize(object, engine) {

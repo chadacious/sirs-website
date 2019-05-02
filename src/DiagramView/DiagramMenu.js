@@ -5,8 +5,9 @@ import { distributeElements } from "./utils/dagre-utils";
 import { withAppContext } from '../AppContext';
 import OpenVersion from './Dialogs/OpenVersion';
 import NewVersion from './Dialogs/NewVersion';
+import VersionProperties from './Dialogs/VersionProperties';
 
-import { addNode, saveSIRScale, getModelReady, prepareNewModel } from './utils/diagram-utils';
+import { addNode, saveSIRScale, getModelReady, prepareNewModel, processUndoRedoAction } from './utils/diagram-utils';
 import { diagramToJson } from './utils/diagramToJson';
 import { LoginForm } from '@medlor/medlor-auth-lib';
 import { loadUser, logOut } from '../actions/userActions';
@@ -17,6 +18,7 @@ class DiagramMenu extends Component {
   state = {
     openVersionDialog: false,
     newVersionDialog: false,
+    openPropertiesDialog: false,
     showLogin: false,
     loginActive: null, // will become false once we have mounted and checked authenticated
   };
@@ -33,16 +35,20 @@ class DiagramMenu extends Component {
     this.setState({ openVersionDialog: true });
   }
 
+  handlePropertiesClick = () => {
+    this.setState({ openPropertiesDialog: true });
+  }
+
   handleSaveVersionClick = () => {
     const { state: { diagramEngine, sirScaleId: id } } = this.props.context;
-    const jsonDefinition = JSON.stringify(diagramEngine.diagramModel.serializeDiagram());
-    saveSIRScale(this.props.context, id, { jsonDefinition });
+    const serializedDiagram = JSON.stringify(diagramEngine.diagramModel.serializeDiagram());
+    saveSIRScale(this.props.context, id, { serializedDiagram });
   }
 
   handlePublishVersionClick = () => {
-    const { state: { diagramEngine: { diagramModel: model } } } = this.props.context;
-    const jsonSIRScale = diagramToJson(model);
-    log.trace(jsonSIRScale);
+    const { state: { diagramEngine: { diagramModel: model }, sirScaleId: id } } = this.props.context;
+    const jsonDefinition = diagramToJson(model);
+    saveSIRScale(this.props.context, id, { jsonDefinition, publishedAt: new Date() });
   }
 
   handleNewNode = (nodeType) => {
@@ -67,8 +73,16 @@ class DiagramMenu extends Component {
     setAppState({ diagramEngine: engine });
   }
 
+  handleUndoClick = () => {
+    processUndoRedoAction(this.props.context, { keyCode: 90 });
+  }
+
+  handleRedoClick = () => {
+    processUndoRedoAction(this.props.context, { keyCode: 89 });
+  }
+
   handleClose = () => {
-    this.setState({ openVersionDialog: false, newVersionDialog: false });
+    this.setState({ openVersionDialog: false, newVersionDialog: false, openPropertiesDialog: false });
   }
 
   handleLogin = () => {
@@ -115,9 +129,12 @@ class DiagramMenu extends Component {
   }
 
   render() {
-    const { openVersionDialog, newVersionDialog, loginActive } = this.state
-    const { user, savingVersion, loadingVersion, version } = this.props.context.state;
-    const saveButtonEnabled = () => (user && version);
+    const { openVersionDialog, newVersionDialog, openPropertiesDialog, loginActive } = this.state
+    const { user, savingVersion, loadingVersion, version, diagramLocked } = this.props.context.state;
+    const modelEditable = () => (!diagramLocked && user && version);
+    const modelLoaded = () => (user && version);
+    const undoActionsAvailable = () => (true);
+    const redoActionsAvailable = () => (true);
     return (
       <React.Fragment>
         <Menu style={{ position: 'absolute', zIndex: 100, minWidth: '100vw' }}>
@@ -125,28 +142,35 @@ class DiagramMenu extends Component {
             <Dropdown.Menu>
               <Dropdown.Item onClick={this.handleNewVersionDialogClick}>New Version</Dropdown.Item>
               <Dropdown.Item onClick={this.handleOpenVersionDialogClick}>Open Version</Dropdown.Item>
-              <Dropdown.Item onClick={this.handleSaveVersionClick}>Save Version</Dropdown.Item>
+              <Dropdown.Item disabled={!modelEditable()} onClick={this.handleSaveVersionClick}>Save Version</Dropdown.Item>
               <Dropdown.Divider />
-              <Dropdown.Item onClick={this.handlePublishVersionClick}>Publish Version</Dropdown.Item>
-              <Dropdown.Item>Version Properties</Dropdown.Item>
+              <Dropdown.Item disabled={!modelEditable()} onClick={this.handlePublishVersionClick}>Publish Version</Dropdown.Item>
+              <Dropdown.Item disabled={!modelLoaded()} onClick={this.handlePropertiesClick}>Version Properties</Dropdown.Item>
               <Dropdown.Divider />
-              <Dropdown.Item>Exit</Dropdown.Item>
+              <Dropdown.Item onClick={() => window.location = '/sirs'}>Exit</Dropdown.Item>
+            </Dropdown.Menu>
+          </Dropdown>
+          <Dropdown disabled={!user} item text='Edit'>
+            <Dropdown.Menu>
+              <Dropdown.Item disabled={!modelEditable() || !undoActionsAvailable()} onClick={this.handleUndoClick}>Undo (Ctrl+z)</Dropdown.Item>
+              <Dropdown.Divider />
+              <Dropdown.Item disabled={!modelEditable() || !redoActionsAvailable()} onClick={this.handleRedoClick}>Redo (Ctrl+y</Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown>
           <Dropdown disabled={!user} item text='Add Node'>
               <Dropdown.Menu>
-                <Dropdown.Item onClick={() => this.handleNewNode('FilterType')}>Filter Type Node</Dropdown.Item>
-                <Dropdown.Item onClick={() => this.handleNewNode('ButtonDecision')}>Button Decision Node</Dropdown.Item>
-                <Dropdown.Item onClick={() => this.handleNewNode('MultipleChoice')}>Multiple Choice Node</Dropdown.Item>
-                <Dropdown.Item onClick={() => this.handleNewNode('Message')}>Message Node</Dropdown.Item>
-                <Dropdown.Item onClick={() => this.handleNewNode('SIRLevel')}>SIR Level Node</Dropdown.Item>
+                <Dropdown.Item disabled={!modelEditable()} onClick={() => this.handleNewNode('FilterType')}>Filter Type Node</Dropdown.Item>
+                <Dropdown.Item disabled={!modelEditable()} onClick={() => this.handleNewNode('ButtonDecision')}>Button Decision Node</Dropdown.Item>
+                <Dropdown.Item disabled={!modelEditable()} onClick={() => this.handleNewNode('MultipleChoice')}>Multiple Choice Node</Dropdown.Item>
+                <Dropdown.Item disabled={!modelEditable()} onClick={() => this.handleNewNode('Message')}>Message Node</Dropdown.Item>
+                <Dropdown.Item disabled={!modelEditable()} onClick={() => this.handleNewNode('SIRLevel')}>SIR Level Node</Dropdown.Item>
               </Dropdown.Menu>
           </Dropdown>
           <Dropdown disabled={!user} item text='Tools'>
             <Dropdown.Menu>
-              <Dropdown.Item onClick={this.handleAutoLayoutClick}>Auto-Layout</Dropdown.Item>
+              <Dropdown.Item disabled={!modelEditable()} onClick={this.handleAutoLayoutClick}>Auto-Layout</Dropdown.Item>
               <Dropdown.Divider />
-              <Dropdown.Item onClick={this.handleZoomToFitClick}>Zoom-to-Fit</Dropdown.Item>
+              <Dropdown.Item disabled={!modelLoaded()} onClick={this.handleZoomToFitClick}>Zoom-to-Fit</Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown>
 
@@ -156,7 +180,7 @@ class DiagramMenu extends Component {
               {loadingVersion && 'Loading...'}
             </Menu.Item>
             <Menu.Item>
-              <Button disabled={!saveButtonEnabled()} primary onClick={this.handleSaveVersionClick}>Save</Button>
+              <Button disabled={!modelEditable()} primary onClick={this.handleSaveVersionClick}>Save</Button>
             </Menu.Item>
             <Menu.Item>
               {!user &&
@@ -186,6 +210,7 @@ class DiagramMenu extends Component {
 
         <NewVersion open={newVersionDialog} onClose={this.handleClose} />
         <OpenVersion open={openVersionDialog} onClose={this.handleClose} />
+        <VersionProperties open={openPropertiesDialog} onClose={this.handleClose} />
       </React.Fragment>
     )
   }

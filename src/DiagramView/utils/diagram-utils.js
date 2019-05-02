@@ -42,6 +42,7 @@ const getSIRScaleVersions = gql`
             filterTypeId
             version
             description
+            publishedAt
         }
     }
 `;
@@ -53,6 +54,8 @@ const loadSIRScaleDefinition = gql`
             version
             description
             jsonDefinition
+            serializedDiagram
+            publishedAt
         }
     }
 `;
@@ -117,15 +120,13 @@ export const getFilterTypes = (setAppState) => {
     });
 };
 
-export const getFitlerTypeSIRScaleVersions = (filterTypeId, setAppState) => {
-    SIRSClient.query({
+export const getFitlerTypeSIRScaleVersions = async (filterTypeId) => {
+    const res = await SIRSClient.query({
         query: getSIRScaleVersions,
         variables: { filterTypeId },
         fetchPolicy: 'network-only'
-    }).then((res) => {
-        // console.log(res.data.allFilterTypes);
-        setAppState({ versions: res.data.getSIRScaleVersions });
     });
+    return res.data.getSIRScaleVersions;
 };
 
 export const getSIRScaleDefinition = async (id) => {
@@ -142,10 +143,11 @@ export const saveSIRScale = (context, id, sirScaleVersionInput) => {
     if (!id) return;
     const { setAppState } = context;
     const { filterTypeId, version } = sirScaleVersionInput;
+    const { state: { description } } = context;
     setAppState({ savingVersion: true, saveError: null });
     SIRSClient.mutate({
         mutation: upsertSIRScaleVersion,
-        variables: { id, sirScaleVersionInput },
+        variables: { id, sirScaleVersionInput: { description, ...sirScaleVersionInput } },
     }).then((res) => {
         const { ok, errors, id } = res.data.SIRScale;
         if (!ok) {
@@ -191,15 +193,15 @@ export const getRevision = async (filterTypeId, version, revision) => {
 export const checkForUnsavedRevision = async (filterTypeId, version) => {
     const lastEntry = await getLatestRevision(filterTypeId, version);
     if (lastEntry && !lastEntry.savedToServer) {
-        return lastEntry.jsonDefinition;
+        return lastEntry.serializedDiagram;
     }
     return false;
 }
 
 export const handleModelChanged = (e, context, savedToServer = false) => {
-    const { diagramEngine: engine, filterTypeId, version } = context.state;
-    if (!filterTypeId || !version) return;
-    const jsonDefinition = JSON.stringify(engine.diagramModel.serializeDiagram());
+    const { diagramEngine: engine, filterTypeId, version, diagramLocked } = context.state;
+    if (!filterTypeId || !version || diagramLocked) return;
+    const serializedDiagram = JSON.stringify(engine.diagramModel.serializeDiagram());
     // log.trace('model changed', e);
     getLatestRevision(filterTypeId, version).then((lastEntry) => {
         const nextRevision = (lastEntry || { revision: 0 }).revision + 1
@@ -207,7 +209,7 @@ export const handleModelChanged = (e, context, savedToServer = false) => {
             filterTypeId,
             version,
             revision: nextRevision,
-            jsonDefinition: jsonDefinition,
+            serializedDiagram: serializedDiagram,
             savedToServer,
         });
         // delete oldest revisions
@@ -240,29 +242,29 @@ export const addNode = (engine, nodeType) => {
     if (nodeType === 'FilterType') {
         node = new FilterTypeNodeModel('No Name', "mediumaquamarine");
         node.setPosition(x, y);
-        node.addOutPort("Out").extras.code = "OUT";
+        node.addOutPort("Out");
         model.addNode(node)
     } else if (nodeType === 'ButtonDecision') {
         node = new ButtonDecisionNodeModel('No Name', "green");
         node.setPosition(x, y);
-        node.addInPort("In").extras.code = "IN";
+        node.addInPort("In");
         node.addOutPort("Yes");
         node.addOutPort("No");
         model.addNode(node)
     } else if (nodeType === 'MultipleChoice') {
         node = new MultipleChoiceNodeModel('No Name', "yellow");
         node.setPosition(x, y);
-        node.addInPort("In").extras.code = "IN";
+        node.addInPort("In");
         model.addNode(node)
     } else if (nodeType === 'Message') {
         node = new MessageNodeModel('No Heading', "orange");
         node.setPosition(x, y);
-        node.addInPort("In").extras.code = "IN";
+        node.addInPort("In");
         model.addNode(node)
     } else if (nodeType === 'SIRLevel') {
         node = new SIRLevelNodeModel('Unknown Level', "grey");
         node.setPosition(x, y);
-        node.addInPort("In").extras.code = "IN";
+        node.addInPort("In");
         model.addNode(node)
     }
     return node;
@@ -274,9 +276,9 @@ export const updateOutPortItemLabel = (outPort) => {
     (outPort.extras.items || []).sort((a, b) => a.sortOrder > b.sortOrder ? 1 : -1)
         .forEach((item) => {
             labelItems.push(
-                <div key={item.code}>
+                <div key={item.id}>
                     <div className='checkbox-box' style={{ backgroundColor: levelColors[outPort.extras.level] }} />
-                    <span className='checkbox-explanation'>{item.name || item.code}</span><br />
+                    <span className='checkbox-explanation'>{item.name || ''}</span><br />
                 </div>
             );
         });
@@ -303,7 +305,7 @@ export const getModelReady = (engine, model) => {
             model.removeListener(e.id);
             const repaintId = engine.addListener({
                 repaintCanvas: (e) => {
-                    log.trace('repainted', e);
+                    log.trace('model ready', e);
                     engine.removeListener(repaintId);
                     resolve({ model, originalZoom, originalOffset });
                 }
@@ -328,3 +330,36 @@ export const assignUndefined = (target, ...sources) => {
     }
     return target;
 };
+
+export const processUndoRedoAction = async (context, e) => {
+    const { state: { filterTypeId, version, revisionIndex }, setAppState } = context;
+    let newRevisionIndex = revisionIndex;
+    if (filterTypeId && version) {
+        // If we are not in a revision cycle, then only ctrl+x applies
+        if (revisionIndex === 0 && e.keyCode === 90) {
+            const latestRevision = await getLatestRevision(filterTypeId, version);
+            if (latestRevision) newRevisionIndex = latestRevision.revision - 1;
+        } else if (newRevisionIndex > 0) {
+            const topRevision = await getLatestRevision(filterTypeId, version);
+            const bottomRevision = await getOldestRevision(filterTypeId, version);
+            if (e.keyCode === 90 && newRevisionIndex - 1 >= bottomRevision.revision) {
+                newRevisionIndex -= 1;
+            } else if (e.keyCode === 89 && newRevisionIndex + 1 <= topRevision.revision) {
+                newRevisionIndex += 1;
+            }
+        }
+        log.trace('loading revision', newRevisionIndex);
+        const loadRevision = await getRevision(filterTypeId, version, newRevisionIndex);
+        // log.trace(loadRevision);
+        if (loadRevision) {
+            const model = new SRD.DiagramModel();
+            const { diagramEngine: engine } = context.state;
+            model.deSerializeDiagram(JSON.parse(loadRevision.serializedDiagram), engine);
+            engine.setDiagramModel(model);
+            addModelListeners(model);
+            setAppState({ diagramEngine: engine, revisionIndex: newRevisionIndex });
+        } else {
+            setAppState({ revisionIndex: newRevisionIndex });
+        }
+    }
+}

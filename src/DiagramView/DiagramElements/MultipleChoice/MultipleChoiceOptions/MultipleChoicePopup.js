@@ -11,7 +11,6 @@ const initialState = {
     selectedNode: {
         name: '',
         extras: {
-            code: '',
             shortName: '',
             description: '',
         },
@@ -19,13 +18,12 @@ const initialState = {
     selectedOutPort: {
         label: '',
         extras: {
-            code: '',
             shortName: '',
             level: null,
         },
     },
     selectedOutPortItem: {
-        code: '',
+        id: '',
         name: '',
         shortName: '',
         sortOrder: '',
@@ -126,7 +124,18 @@ class MultipleChoicePopup extends Component {
 
     handleDeleteOutPort = (outPort) => {
         const { selectedNode } = this.state;
+
         delete selectedNode.ports[outPort.id];
+
+        const ports = _.keys(selectedNode.ports).map(portKey => selectedNode.ports[portKey]);
+        let index = 1;
+        ports.filter(port => !port.in).sort((a, b) => a.extras.sortOrder > b.extras.sortOrder ? 1 : -1)
+            .forEach((port) => {
+                selectedNode.ports[port.id] = Object.assign(port, { extras: { ...port.extras, sortOrder: index } });
+                index += 1;
+            });
+        
+        console.log('selectedNode.ports', selectedNode.ports);
         this.updateState({ selectedNode, selectedOutPort: { ...initialState.selectedOutPort } });
     }
 
@@ -134,7 +143,6 @@ class MultipleChoicePopup extends Component {
         const { selectedNode } = this.state;
         let outPort = selectedNode.addOutPort("Untitled");
         outPort = { ...assignUndefined(outPort, initialState.selectedOutPort), extras: assignUndefined(outPort.extras, initialState.selectedOutPort.extras) };
-        outPort.extras.code = Math.random().toString(36).substring(7);
         outPort.extras.sortOrder = selectedNode.getOutPorts().length;
         this.updateState({ selectedNode, selectedOutPort: outPort });
     }
@@ -164,7 +172,6 @@ class MultipleChoicePopup extends Component {
         if (!selectedOutPort.extras.items) selectedOutPort.extras.items = [];
         const newItem = assignUndefined({
             id: Math.random().toString(36).substring(7),
-            code: Math.random().toString(36).substring(7),
             sortOrder: selectedOutPort.extras.items.length + 1,
         }, initialState.selectedOutPortItem);
         selectedOutPort.extras.items.push(newItem);
@@ -188,8 +195,19 @@ class MultipleChoicePopup extends Component {
 
     handleDeleteOutPortItem = (outPortItem) => {
         const { selectedNode, selectedOutPort } = this.state;
-        const index = selectedOutPort.extras.items.findIndex(item => item.code === outPortItem.code);
-        delete selectedOutPort.extras.items[index];
+        // const index = selectedOutPort.extras.items.findIndex(item => item.id === outPortItem.id);
+        const newItems = [];
+        let index = 1;
+        selectedOutPort.extras.items
+            .sort((a, b) => a.sortOrder > b.sortOrder ? 1 : -1)
+            .forEach((item) => {
+                if (item.id !== outPortItem.id) {
+                    newItems.push({ ...item, sortOrder: index });
+                    index += 1;
+                }
+            });
+        // delete selectedOutPort.extras.items[index];
+        selectedOutPort.extras.items = newItems;
         this.updateState({ selectedNode, selectedOutPort });
     }
 
@@ -229,10 +247,10 @@ class MultipleChoicePopup extends Component {
     render() {
         const { selectedNode, editingCheckListItems, selectedOutPortItem } = this.state;
         const outPorts = selectedNode.getOutPorts ? selectedNode.getOutPorts() : [];
+        const { diagramLocked } = this.props.context.state;
         const {
             name,
             extras: {
-                code = '',
                 shortName = '',
                 description = '',
             },
@@ -246,45 +264,38 @@ class MultipleChoicePopup extends Component {
         const panes = [
         { menuItem: 'Prompt', render: () => (
             <Tab.Pane>
-            <Form.TextArea
-                label="Question or Request"
-                name="name"
-                placeholder="Enter the question or request..."
-                value={name}
-                onChange={this.handleChangeNode}
-            />
-            <Form.Input
-                fluid
-                label="Code"
-                name="code"
-                placeholder="Enter a unique human readable code if desired"
-                value={code}
-                onChange={this.handleChangeNodeExtras}
-            />
+                <Form.TextArea
+                    label="Question or Request"
+                    name="name"
+                    disabled={diagramLocked}
+                    placeholder="Enter the question or request..."
+                    value={name}
+                    onChange={this.handleChangeNode}
+                />
             </Tab.Pane>
         )},
         { menuItem: 'Levels', render: () => (
             <Tab.Pane>
                 {editingCheckListItems === false &&
                 <React.Fragment>
-                    <Segment style={{overflow: 'auto', height: '210px' }}>
+                    <Segment disabled={diagramLocked} style={{overflow: 'auto', height: '210px' }}>
                         <List selection verticalAlign='middle' celled size="mini">
-                            <List.Item onClick={this.handleNewOutPortClick}>
+                            <List.Item disabled={diagramLocked} onClick={this.handleNewOutPortClick}>
                                 <List.Content style={{ textAlign: 'center' }}>
-                                    <Button color="green">Add Level</Button>
+                                    <Button disabled={diagramLocked} color="green">Add Level</Button>
                                 </List.Content>
                             </List.Item>
                             {outPorts
                                 .sort((a, b) => a.extras.sortOrder > b.extras.sortOrder ? 1 : -1)
                                 .map((outPort) => (
                             <List.Item key={outPort.id} onClick={() => {this.handleOutPortSelected(outPort)}}>
-                                <Icon link name='trash' onClick={() => this.handleDeleteOutPort(outPort)} />
+                                <Icon disabled={diagramLocked} link name='trash' onClick={() => this.handleDeleteOutPort(outPort)} />
                                 <List.Content>
                                     <List.Header>{`Level ${outPort.extras.level}`}</List.Header>
                                     <List.Description>{updateOutPortItemLabel(outPort)}</List.Description>
                                 </List.Content>
-                                <Icon link size="large" name='chevron up' onClick={() => this.handleOutPortMove(outPort, -1)} />
-                                <Icon link size="large" name='chevron down' onClick={() => this.handleOutPortMove(outPort, 1)} />
+                                <Icon disabled={diagramLocked} link size="large" name='chevron up' onClick={() => this.handleOutPortMove(outPort, -1)} />
+                                <Icon disabled={diagramLocked} link size="large" name='chevron down' onClick={() => this.handleOutPortMove(outPort, 1)} />
                             </List.Item>
                             ))}
                         </List>
@@ -298,7 +309,7 @@ class MultipleChoicePopup extends Component {
                                 <Grid.Column width={6}>
                                     <Form.Select
                                         name="level"
-                                        disabled={!selectedOutPort.id}
+                                        disabled={!selectedOutPort.id || diagramLocked}
                                         text={(allLevels[selectedOutPort.extras.level - 1] || {}).text}
                                         options={levels}
                                         onChange={this.handleChangeOutPortExtras}
@@ -314,7 +325,7 @@ class MultipleChoicePopup extends Component {
                                         disabled={!selectedOutPort.id}
                                         onClick={() => this.setState({ editingCheckListItems: true })}
                                     >
-                                        Edit Check Items
+                                        {diagramLocked ? 'Show Check Items' : 'Edit Check Items'}
                                     </Button>
                                 </Grid.Column>
                             </Grid.Row> 
@@ -328,7 +339,7 @@ class MultipleChoicePopup extends Component {
                                         name="shortName"
                                         placeholder='Enter a shorter name for tight displays'
                                         value={selectedOutPort.extras.shortName}
-                                        disabled={!selectedOutPort.id}
+                                        disabled={!selectedOutPort.id || diagramLocked}
                                         onChange={this.handleChangeOutPortExtras}
                                     />
                                 </Grid.Column>
@@ -339,11 +350,11 @@ class MultipleChoicePopup extends Component {
                 }
                 {editingCheckListItems &&
                 <React.Fragment>
-                    <Segment style={{overflow: 'auto', height: 195 }}>
+                    <Segment disabled={diagramLocked} style={{overflow: 'auto', height: 195 }}>
                     <List selection size="mini">
-                        <List.Item onClick={this.handleNewOutPortItemClick}>
+                        <List.Item disabled={diagramLocked} onClick={this.handleNewOutPortItemClick}>
                             <List.Content style={{ textAlign: 'center' }}>
-                                <Button basic color={levelColors[selectedOutPort.extras.level]}>
+                                <Button disabled={diagramLocked} basic color={levelColors[selectedOutPort.extras.level]}>
                                     Add Level {selectedOutPort.extras.level} Check Item
                                 </Button>
                             </List.Content>
@@ -353,14 +364,14 @@ class MultipleChoicePopup extends Component {
                             .map((item) => {
                         // console.log(item.name);
                         return (
-                            <List.Item key={item.code} onClick={() => {this.handleOutPortItemSelected(item)}}>
-                                <Icon link name='trash' onClick={() => this.handleDeleteOutPortItem(item)} />
+                            <List.Item key={item.id} onClick={() => {this.handleOutPortItemSelected(item)}}>
+                                <Icon disabled={diagramLocked} link name='trash' onClick={() => this.handleDeleteOutPortItem(item)} />
                                 <List.Content>
-                                    <List.Header>{item.code}</List.Header>
-                                    <List.Description>{item.name}</List.Description>
+                                    <List.Header>{item.shortName || item.name}</List.Header>
+                                    {item.shortName && <List.Description>{item.name}</List.Description>}
                                 </List.Content>
-                                <Icon link size="large" name='chevron up' onClick={() => this.handleOutPortItemMove(item, -1)} />
-                                <Icon link size="large" name='chevron down' onClick={() => this.handleOutPortItemMove(item, 1)} />
+                                <Icon disabled={diagramLocked} link size="large" name='chevron up' onClick={() => this.handleOutPortItemMove(item, -1)} />
+                                <Icon disabled={diagramLocked} link size="large" name='chevron down' onClick={() => this.handleOutPortItemMove(item, 1)} />
                             </List.Item>
                         )}
                         )}
@@ -368,21 +379,6 @@ class MultipleChoicePopup extends Component {
                     </Segment>
                     <Segment size="mini">
                         <Grid>
-                            <Grid.Row style={{ paddingTop: '0.75em', paddingBottom: '0.75em' }}>
-                                <Grid.Column width={4} textAlign='right' style={{ padding: '0', paddingTop: '0.3em' }}>
-                                    Code:
-                                </Grid.Column>
-                                <Grid.Column width={12}>
-                                    <Form.Input
-                                        fluid
-                                        name="code"
-                                        placeholder='Assign a human readable code'
-                                        value={selectedOutPortItem.code}
-                                        disabled={!selectedOutPortItem.code}
-                                        onChange={this.handleOutPortItemChanged}
-                                    />
-                                </Grid.Column>
-                            </Grid.Row>
                             <Grid.Row style={{ paddingTop: 0, paddingBottom: '0.75em' }}>
                                 <Grid.Column width={4} textAlign='right' style={{ padding: '0', paddingTop: '0.3em' }}>
                                 Checkbox Text:
@@ -393,7 +389,7 @@ class MultipleChoicePopup extends Component {
                                         name="name"
                                         placeholder='Enter the button text'
                                         value={selectedOutPortItem.name}
-                                        disabled={!selectedOutPortItem.code}
+                                        disabled={!selectedOutPortItem.id || diagramLocked}
                                         onChange={this.handleOutPortItemChanged}
                                     />
                                 </Grid.Column>
@@ -408,7 +404,7 @@ class MultipleChoicePopup extends Component {
                                         name="shortName"
                                         placeholder='Enter a short name for tight displays'
                                         value={selectedOutPortItem.shortName}
-                                        disabled={!selectedOutPortItem.code}
+                                        disabled={!selectedOutPortItem.id || diagramLocked}
                                         onChange={this.handleOutPortItemChanged}
                                     />
                                 </Grid.Column>
@@ -421,7 +417,7 @@ class MultipleChoicePopup extends Component {
         )},
         { menuItem: 'Diagram', render: () => (
             <Tab.Pane>
-                <DiagramOptions node={selectedNode} onUpdate={this.handleDiagramOptionsUpdate} />
+                <DiagramOptions disabled={diagramLocked} node={selectedNode} onUpdate={this.handleDiagramOptionsUpdate} />
             </Tab.Pane>
         )},
         { menuItem: 'More', render: () => (
@@ -429,6 +425,7 @@ class MultipleChoicePopup extends Component {
                 <Form.TextArea
                     label="Short Name"
                     name="shortName"
+                    disabled={diagramLocked}
                     placeholder="Enter a shorter version of the question or request..."
                     value={shortName}
                     onChange={this.handleChangeNodeExtras}
@@ -436,6 +433,7 @@ class MultipleChoicePopup extends Component {
                 <Form.TextArea
                     label="Description"
                     name="description"
+                    disabled={diagramLocked}
                     placeholder="Enter a description to offer clarification for the tagger..."
                     value={description}
                     onChange={this.handleChangeNodeExtras}
@@ -450,8 +448,8 @@ class MultipleChoicePopup extends Component {
                 <Segment basic compact floated="right">
                 {editingCheckListItems === false &&
                 <Form.Group>
-                    <Form.Button secondary onClick={this.handleCancel}>Undo Changes</Form.Button>
-                    <Form.Button primary onClick={this.handleSubmit}>Done</Form.Button>
+                    <Form.Button secondary onClick={this.handleCancel}>{diagramLocked ? 'Close' : 'Undo Changes'}</Form.Button>
+                    {!diagramLocked && <Form.Button primary onClick={this.handleSubmit}>Done</Form.Button>}
                 </Form.Group>
                 }
                 {editingCheckListItems &&

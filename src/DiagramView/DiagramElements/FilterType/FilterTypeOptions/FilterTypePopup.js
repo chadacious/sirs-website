@@ -67,6 +67,8 @@ class FilterTypePopup extends Component {
 
     render() {
         const { selectedNode } = this.state;
+        const { diagramLocked } = this.props.context.state;
+
         const {
             name,
             extras: {
@@ -82,6 +84,7 @@ class FilterTypePopup extends Component {
             <Form.TextArea
                 label="Filter Type Name"
                 name="name"
+                disabled={diagramLocked}
                 placeholder="Enter the name of this filter type..."
                 value={name}
                 onChange={this.handleChangeNode}
@@ -90,6 +93,7 @@ class FilterTypePopup extends Component {
                 fluid
                 label="Code"
                 name="code"
+                disabled={diagramLocked}
                 placeholder="Enter a unique human readable code if desired"
                 value={code}
                 onChange={this.handleChangeNodeExtras}
@@ -98,7 +102,7 @@ class FilterTypePopup extends Component {
         )},
         { menuItem: 'Diagram', render: () => (
             <Tab.Pane>
-                <DiagramOptions node={selectedNode} onUpdate={this.handleDiagramOptionsUpdate} />
+                <DiagramOptions disabled={diagramLocked} node={selectedNode} onUpdate={this.handleDiagramOptionsUpdate} />
             </Tab.Pane>
         )},
         { menuItem: 'More', render: () => (
@@ -106,6 +110,7 @@ class FilterTypePopup extends Component {
                 <Form.TextArea
                     label="Short Name"
                     name="shortName"
+                    disabled={diagramLocked}
                     placeholder="Enter a shorter version of the question or request..."
                     value={shortName}
                     onChange={this.handleChangeNodeExtras}
@@ -113,6 +118,7 @@ class FilterTypePopup extends Component {
                 <Form.TextArea
                     label="Description"
                     name="description"
+                    disabled={diagramLocked}
                     placeholder="Enter a description to offer clarification for the tagger..."
                     value={description}
                     onChange={this.handleChangeNodeExtras}
@@ -126,8 +132,8 @@ class FilterTypePopup extends Component {
                 <Tab panes={panes} style={{ height: '380px' }} />
                 <Segment basic compact floated="right">
                 <Form.Group>
-                    <Form.Button secondary onClick={this.handleCancel}>Undo Changes</Form.Button>
-                    <Form.Button primary onClick={this.handleSubmit}>Done</Form.Button>
+                    <Form.Button secondary onClick={this.handleCancel}>{diagramLocked ? 'Close' : 'Undo Changes'}</Form.Button>
+                    {!diagramLocked && <Form.Button primary onClick={this.handleSubmit}>Done</Form.Button>}
                 </Form.Group>
                 </Segment>
             </Form>

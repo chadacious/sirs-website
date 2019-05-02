@@ -11,7 +11,7 @@ export default class MultipleChoiceOptions extends Component {
 
     render() {
         // const { activeItem } = this.state;
-        const { node /* , node: { type } */ } = this.props;
+        const { node } = this.props;
         const { open } = this.state;
         return (
             <React.Fragment>

@@ -4,12 +4,12 @@ import { log } from '@medlor/medlor-core-lib';
 const generateDecisionTree = (model, node) => {
     const { name, type, extras: { code, description, shortName, message } } = node;
     const branch = {
-        code,
         name,
         description,
         shortName,
         type,
     };
+    if (code) branch.code = code;
 
     // Now build the choices for this branch
     // choices correspond to out ports of the node
@@ -17,11 +17,12 @@ const generateDecisionTree = (model, node) => {
         .filter(portKey => node.ports[portKey].in === false)
         .forEach((portKey) => {
             const port = node.ports[portKey];
-            const { extras: { code, sortOrder }, label: name } = port;
-            const choice = port.extras.level ? {} : { code, name };
+            const { extras: { shortName, sortOrder, quickSelect }, label: name } = port;
+            const choice = port.extras.level ? {} : { name };
+            if (quickSelect) choice.quickSelect = quickSelect;
             if (sortOrder) choice.sortOrder = sortOrder;
-            if (message) choice.message = message;
             if (shortName) choice.shortName = shortName;
+            if (message) choice.message = message;
 
             // Handle the typical scenario where this choice branches to another node
             _.keys(port.links).forEach((linkKey) => {
@@ -35,9 +36,9 @@ const generateDecisionTree = (model, node) => {
                     choice.level = extras.level;
                     // console.log('extras', extras);
                     extras.items.forEach((item) => {
-                        const { code, name, sortOrder } = item;
+                        const { id, name, shortName, sortOrder } = item;
                         if (!choice.items) choice.items = [];
-                        choice.items.push({ code, name, sortOrder });
+                        choice.items.push({ id, name, shortName, sortOrder });
                     });
                     // console.log(choice);
                 }
@@ -76,7 +77,7 @@ export const diagramToJson = (model) => {
         // log.trace('port', port);
         // log.trace('link', link);
         const linkedNode = getTrueTargetNode(link);
-        log.trace('starting with', linkedNode)
+        // log.trace('starting with', linkedNode)
         const { extras: { code: filterType }, name } = node;
         const ft = {
             filterType,

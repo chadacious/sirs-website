@@ -17,7 +17,6 @@ export class MultipleChoiceNodeModel extends NodeModel {
 
 	addOutPort(label) {
 		const port = this.addPort(new PortWithExtrasModel(false, label, label, Toolkit.UID()));
-		port.extras.code = label.toUpperCase();
 		port.extras.sortOrder = this.getOutPorts().length;
 		return this.addPort(port);
 	}

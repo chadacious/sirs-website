@@ -1,5 +1,5 @@
 import React from 'react';
-import { DiagramWidget, DiagramModel } from 'storm-react-diagrams'
+import { DiagramWidget } from 'storm-react-diagrams'
 import { EventSystem } from '@medlor/medlor-core-lib';
 
 import { withAppContext } from '../AppContext';
@@ -9,10 +9,7 @@ import {
     getFilterTypes,
     handleModelChanged,
     saveSIRScale,
-    getLatestRevision,
-    getOldestRevision,
-    getRevision,
-    addModelListeners,
+    processUndoRedoAction,
   } from './utils/diagram-utils';
 import ZoomSlider from './DiagramTools/ZoomSlider';
 
@@ -23,48 +20,23 @@ class DiagramView extends React.Component {
         const engine = initializeDiagramEngine();
         const { setAppState } = this.props.context;
         getFilterTypes(setAppState);
-        setAppState({ diagramEngine: engine });
+        setAppState({ diagramEngine: engine, revisionIndex: 0 });
         EventSystem.subscribe('ZOOM_SLIDER', this.handleZoomSliderEvent);
         EventSystem.subscribe('MODEL_CHANGED_EVENT', this.handleModelChangedEvent);
         document.onkeydown = this.handleKeyPress.bind(this);
-        this.revisionIndex = 0;
     }
   
     handleKeyPress = async (e) => {
+        // undo/redo
         if ((e.keyCode === 90 || e.keyCode === 89) && e.ctrlKey) {
-          const { filterTypeId, version } = this.props.context.state;
-          if (filterTypeId && version) {
-            // If we are not in a revision cycle, then only ctrl+x applies
-            if (this.revisionIndex === 0 && e.keyCode === 90) {
-                const latestRevision = await getLatestRevision(filterTypeId, version);
-                this.revisionIndex = latestRevision.revision - 1;
-            } else if (this.revisionIndex > 0) {
-                const topRevision = await getLatestRevision(filterTypeId, version);
-                const bottomRevision = await getOldestRevision(filterTypeId, version);
-                if (e.keyCode === 90 && this.revisionIndex - 1 >= bottomRevision.revision) {
-                    this.revisionIndex -= 1;
-                } else if (e.keyCode === 89 && this.revisionIndex + 1 <= topRevision.revision) {
-                    this.revisionIndex += 1;
-                }
-            }
-            // console.log('loading revision', this.revisionIndex);
-            const loadRevision = await getRevision(filterTypeId, version, this.revisionIndex);
-            // console.log(loadRevision);
-            if (loadRevision) {
-                const model = new DiagramModel();
-                const { diagramEngine: engine } = this.props.context.state;
-                model.deSerializeDiagram(JSON.parse(loadRevision.jsonDefinition), engine);
-                engine.setDiagramModel(model);
-                addModelListeners(model);
-                this.forceUpdate();
-            }
-          }
+            processUndoRedoAction(this.props.context, e);
         }
+        // save
         if (e.keyCode === 83 && e.ctrlKey) {
             e.preventDefault();
             const { diagramEngine, sirScaleId: id } = this.props.context.state;
-            const jsonDefinition = JSON.stringify(diagramEngine.diagramModel.serializeDiagram());
-            saveSIRScale(this.props.context, id, { jsonDefinition });
+            const serializedDiagram = JSON.stringify(diagramEngine.diagramModel.serializeDiagram());
+            saveSIRScale(this.props.context, id, { serializedDiagram });
         }
     }
     

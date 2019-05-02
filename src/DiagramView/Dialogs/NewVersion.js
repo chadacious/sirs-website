@@ -31,14 +31,15 @@ class NewVersion extends React.Component {
         }   
     }
 
-    handleFilterTypeChanged = (e, { value }) => {
+    handleFilterTypeChanged = async (e, { value }) => {
         const { setAppState } = this.props.context;
-        getFitlerTypeSIRScaleVersions(value, setAppState);
+        const versions = await getFitlerTypeSIRScaleVersions(value);
+        setAppState({ versions });
         this.setState({ selectedFilterType: value })
     }
 
     handleBaseVersionSelected = (version) => {
-        const { selectedVersion }= this.state;
+        const { selectedVersion } = this.state;
         if (version === selectedVersion) {
             this.setState({
                 selectedVersion: null,
@@ -75,20 +76,22 @@ class NewVersion extends React.Component {
         const { selectedFilterType, selectedVersion, major, minor, patch, description } = this.state;
         // selectedVersion
         const version = `${major}.${minor}.${patch}`;
-        let jsonDefinition = '';
+        let serializedDiagram = '';
         let model = prepareNewModel();
         if (selectedVersion) {
             const sirScale = versions.filter(v => v.filterTypeId === selectedFilterType && v.version === selectedVersion)[0];
             const loadedSIRScale = await getSIRScaleDefinition(sirScale.id);
-            jsonDefinition = loadedSIRScale.jsonDefinition;
-            model.deSerializeDiagram(JSON.parse(jsonDefinition), engine);
+            // console.log(sirScale.id, loadedSIRScale);
+            serializedDiagram = loadedSIRScale.serializedDiagram;
+            // console.log(JSON.parse(serializedDiagram));
+            model.deSerializeDiagram(JSON.parse(serializedDiagram), engine);
         } else {
-            jsonDefinition = JSON.stringify(model.serializeDiagram());
+            serializedDiagram = JSON.stringify(model.serializeDiagram());
         }
         engine.setDiagramModel(model);
 
         console.log('creating new version', version);
-        saveSIRScale(this.props.context, -1, { filterTypeId: selectedFilterType, version, description, jsonDefinition });
+        saveSIRScale(this.props.context, -1, { filterTypeId: selectedFilterType, version, description, serializedDiagram });
         onClose();
     };
 
@@ -110,7 +113,7 @@ class NewVersion extends React.Component {
             && patch !== ''
             && !versionConflicts()
         );
-
+        console.log(versions);
         return (
             <Modal size="tiny" open={open} closeIcon onClose={onClose}>
                 <Header icon='plus' content="Create New SIR Scale Version" />

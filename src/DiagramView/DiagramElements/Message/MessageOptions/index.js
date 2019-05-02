@@ -10,7 +10,7 @@ export default class MessageOptions extends Component {
     }
 
     render() {
-        const { node /* , node: { type } */ } = this.props;
+        const { node } = this.props;
         const { open } = this.state;
         return (
             <React.Fragment>

@@ -9,7 +9,6 @@ const initialState = {
     selectedNode: {
         name: '',
         extras: {
-            code: '',
             message: '',
         },
     },
@@ -66,10 +65,11 @@ class MessagePopup extends Component {
 
     render() {
         const { selectedNode } = this.state;
+        const { diagramLocked } = this.props.context.state;
+
         const {
             name,
             extras: {
-                code = '',
                 message = '',
             },
         } = selectedNode;
@@ -78,33 +78,27 @@ class MessagePopup extends Component {
         { menuItem: 'Prompt', render: () => (
             <Tab.Pane>
                 <Form.Input
-                fluid
-                label="Heading"
-                name="name"
-                placeholder="Enter a heading for the message..."
-                value={name}
-                onChange={this.handleChangeNode}
+                    fluid
+                    label="Heading"
+                    name="name"
+                    disabled={diagramLocked}
+                    placeholder="Enter a heading for the message..."
+                    value={name}
+                    onChange={this.handleChangeNode}
                 />
                 <Form.TextArea
                     label="Message"
                     name="message"
+                    disabled={diagramLocked}
                     placeholder="Enter the message for the user..."
                     value={message}
-                    onChange={this.handleChangeNodeExtras}
-                />
-                <Form.Input
-                    fluid
-                    label="Code"
-                    name="code"
-                    placeholder="Enter a unique human readable code if desired"
-                    value={code}
                     onChange={this.handleChangeNodeExtras}
                 />
             </Tab.Pane>
         )},
         { menuItem: 'Diagram', render: () => (
             <Tab.Pane>
-                <DiagramOptions node={selectedNode} onUpdate={this.handleDiagramOptionsUpdate} />
+                <DiagramOptions disabled={diagramLocked} node={selectedNode} onUpdate={this.handleDiagramOptionsUpdate} />
             </Tab.Pane>
         )}
         ]
@@ -114,8 +108,8 @@ class MessagePopup extends Component {
                 <Tab panes={panes} style={{ height: '380px' }} />
                 <Segment basic compact floated="right">
                 <Form.Group>
-                    <Form.Button secondary onClick={this.handleCancel}>Undo Changes</Form.Button>
-                    <Form.Button primary onClick={this.handleSubmit}>Done</Form.Button>
+                    <Form.Button secondary onClick={this.handleCancel}>{diagramLocked ? 'Close' : 'Undo Changes'}</Form.Button>
+                    {!diagramLocked && <Form.Button primary onClick={this.handleSubmit}>Done</Form.Button>}
                 </Form.Group>
                 </Segment>
             </Form>
