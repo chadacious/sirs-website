@@ -139,39 +139,43 @@ export const getSIRScaleDefinition = async (id) => {
 };
 
 export const saveSIRScale = (context, id, sirScaleVersionInput) => {
-    // console.log('upserting', sirScaleVersionInput);
-    if (!id) return;
-    const { setAppState } = context;
-    const { filterTypeId, version } = sirScaleVersionInput;
-    const { state: { description } } = context;
-    setAppState({ savingVersion: true, saveError: null });
-    SIRSClient.mutate({
-        mutation: upsertSIRScaleVersion,
-        variables: { id, sirScaleVersionInput: { description, ...sirScaleVersionInput } },
-    }).then((res) => {
-        const { ok, errors, id } = res.data.SIRScale;
-        if (!ok) {
-            setAppState({ savingVersion: false, saveError: errors[0].message });
-            // throw new Error(`There was an error saving the data: upsertSIRScaleVersion: ${errors[0].message}`);
-        } else {
-            // console.log(res.data.allFilterTypes);
-            let loadVersionToState = {};
-            if (filterTypeId && version) {
-                loadVersionToState = {
-                    filterTypeId, 
-                    version,
-                };
+    return new Promise((resolve) => {
+        // console.log('upserting', sirScaleVersionInput);
+        if (!id) return;
+        const { setAppState } = context;
+        const { filterTypeId, version } = sirScaleVersionInput;
+        const { state: { description } } = context;
+        setAppState({ savingVersion: true, saveError: null });
+        SIRSClient.mutate({
+            mutation: upsertSIRScaleVersion,
+            variables: { id, sirScaleVersionInput: { description, ...sirScaleVersionInput } },
+        }).then((res) => {
+            const { ok, errors, id } = res.data.SIRScale;
+            if (!ok) {
+                setAppState({ savingVersion: false, saveError: errors[0].message });
+                // throw new Error(`There was an error saving the data: upsertSIRScaleVersion: ${errors[0].message}`);
+            } else {
+                // console.log(res.data.allFilterTypes);
+                let loadVersionToState = {};
+                if (filterTypeId && version) {
+                    loadVersionToState = {
+                        filterTypeId, 
+                        version,
+                    };
+                }
+                setAppState({
+                    savingVersion: false,
+                    saveError: null,
+                    sirScaleId: id,
+                    ...loadVersionToState,
+                });
+                // indicate that we have saved the latest entry
+                handleModelChanged({ id: 'saveSIRScale' }, context, true);
+                resolve();
             }
-            setAppState({
-                savingVersion: false,
-                saveError: null,
-                sirScaleId: id,
-                ...loadVersionToState,
-            });
-            // indicate that we have saved the latest entry
-            handleModelChanged({ id: 'saveSIRScale' }, context, true);
-        }
+        });
     });
+    
 };
 
 export const getLatestRevision = async (filterTypeId, version) => {
@@ -363,3 +367,25 @@ export const processUndoRedoAction = async (context, e) => {
         }
     }
 }
+
+export const reloadDiagram = async (context) => {
+    const { sirScaleId, filterTypeId, version, diagramEngine: engine } = context.state;
+    const { setAppState } = context;
+    const loadedSIRScale = await getSIRScaleDefinition(sirScaleId);
+    db.diagram.where({ filterTypeId, version }).delete();
+    let diagramLocked = false;
+    if (loadedSIRScale.publishedAt) {
+        log.trace('loadedSIRScale.publishedAt', new Date(loadedSIRScale.publishedAt));
+        diagramLocked = new Date(loadedSIRScale.publishedAt) < new Date();
+    }
+    const model = new SRD.DiagramModel();
+    const { serializedDiagram } = loadedSIRScale;
+    model.deSerializeDiagram(JSON.parse(serializedDiagram), engine);
+    console.log('diagramLocked', diagramLocked);
+    if (diagramLocked) model.setLocked(diagramLocked);
+    engine.setDiagramModel(model);
+    addModelListeners(model);
+    setAppState({
+        diagramLocked,
+    });
+};

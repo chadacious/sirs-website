@@ -1,7 +1,7 @@
 import React from 'react'
 import { Button, Header, Icon, Modal, List, Segment, Form, Select, Message, Input } from 'semantic-ui-react'
 import { withAppContext } from '../../AppContext';
-import { getFitlerTypeSIRScaleVersions, saveSIRScale, getSIRScaleDefinition, prepareNewModel } from '../utils/diagram-utils';
+import { getFitlerTypeSIRScaleVersions, saveSIRScale, getSIRScaleDefinition, prepareNewModel, addNode } from '../utils/diagram-utils';
 
 const initialState = {
     startFromScratch: false,
@@ -89,9 +89,16 @@ class NewVersion extends React.Component {
             serializedDiagram = JSON.stringify(model.serializeDiagram());
         }
         engine.setDiagramModel(model);
-
-        console.log('creating new version', version);
+        if (!selectedVersion) {
+            // creating from scratch, ensure that the starting filter type node exists
+            const ftNode = addNode(engine, 'FilterType');
+            const { filterTypes } = this.props.context.state;
+            const ft = filterTypes.filter(ft => ft.id === selectedFilterType)[0];
+            ftNode.name = ft.name;
+            ftNode.extras.code = ft.code;
+        }
         saveSIRScale(this.props.context, -1, { filterTypeId: selectedFilterType, version, description, serializedDiagram });
+        this.props.context.setAppState({ diagramLocked: false });
         onClose();
     };
 
@@ -113,7 +120,7 @@ class NewVersion extends React.Component {
             && patch !== ''
             && !versionConflicts()
         );
-        console.log(versions);
+
         return (
             <Modal size="tiny" open={open} closeIcon onClose={onClose}>
                 <Header icon='plus' content="Create New SIR Scale Version" />

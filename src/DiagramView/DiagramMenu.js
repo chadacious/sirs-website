@@ -7,7 +7,7 @@ import OpenVersion from './Dialogs/OpenVersion';
 import NewVersion from './Dialogs/NewVersion';
 import VersionProperties from './Dialogs/VersionProperties';
 
-import { addNode, saveSIRScale, getModelReady, prepareNewModel, processUndoRedoAction } from './utils/diagram-utils';
+import { addNode, saveSIRScale, getModelReady, prepareNewModel, processUndoRedoAction, reloadDiagram } from './utils/diagram-utils';
 import { diagramToJson } from './utils/diagramToJson';
 import { LoginForm } from '@medlor/medlor-auth-lib';
 import { loadUser, logOut } from '../actions/userActions';
@@ -48,7 +48,10 @@ class DiagramMenu extends Component {
   handlePublishVersionClick = () => {
     const { state: { diagramEngine: { diagramModel: model }, sirScaleId: id } } = this.props.context;
     const jsonDefinition = diagramToJson(model);
-    saveSIRScale(this.props.context, id, { jsonDefinition, publishedAt: new Date() });
+    saveSIRScale(this.props.context, id, { jsonDefinition, publishedAt: new Date() })
+      .then(() => {
+        reloadDiagram(this.props.context);
+      });
   }
 
   handleNewNode = (nodeType) => {
