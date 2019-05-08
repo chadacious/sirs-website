@@ -227,7 +227,22 @@ class ButtonDecisionPopup extends Component {
                                     onChange={this.handleChangeOutPortExtras}
                                 />
                             </Grid.Column>
-                        </Grid.Row> 
+                        </Grid.Row>
+                        <Grid.Row style={{ paddingTop: 0, paddingBottom: '0.75em' }}>
+                            <Grid.Column width={4} textAlign='right' style={{ padding: '0', paddingTop: '0.3em' }}>
+                                Code:
+                            </Grid.Column>
+                            <Grid.Column width={12}>
+                                <Form.Input
+                                    fluid
+                                    name="code"
+                                    placeholder='A unique code is used when filtering in tools. Refer to tag filters when determining if a code will be needed for this outcome.'
+                                    value={selectedOutPort.extras.code}
+                                    disabled={!selectedOutPort.id || diagramLocked}
+                                    onChange={this.handleChangeOutPortExtras}
+                                />
+                            </Grid.Column>
+                        </Grid.Row>                         
                     </Grid>
                 </Segment>
             </Tab.Pane>
@@ -261,7 +276,7 @@ class ButtonDecisionPopup extends Component {
 
         return (
             <Form>
-                <Tab panes={panes} style={{ height: '380px' }} />
+                <Tab panes={panes} style={{ height: '400px' }} />
                 <Segment basic compact floated="right">
                 <Form.Group>
                     <Form.Button secondary onClick={this.handleCancel}>{diagramLocked ? 'Close' : 'Undo Changes'}</Form.Button>

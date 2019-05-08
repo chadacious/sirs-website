@@ -27,7 +27,7 @@ class ButtonDecisionOptions extends Component {
                 />
                 <Popup
                     wide="very"
-                    style={{ minWidth: '510px', height: '500px', zIndex: 1000 }}
+                    style={{ minWidth: '510px', height: '520px', zIndex: 1000 }}
                     open={open}
                     onClose={this.handleClose}
                     context={this.contextRef}

@@ -2,14 +2,17 @@ import * as _ from 'lodash';
 import { log } from '@medlor/medlor-core-lib';
 
 const generateDecisionTree = (model, node) => {
-    const { name, type, extras: { code, description, shortName, message } } = node;
+    const { id, name, type, parentChoiceId, extras: { code, description, shortName, message } } = node;
     const branch = {
+        id,
         name,
         description,
         shortName,
         type,
     };
     if (code) branch.code = code;
+    if (message) branch.message = message;
+    if (parentChoiceId) branch.parentChoiceId = parentChoiceId;
 
     // Now build the choices for this branch
     // choices correspond to out ports of the node
@@ -17,12 +20,14 @@ const generateDecisionTree = (model, node) => {
         .filter(portKey => node.ports[portKey].in === false)
         .forEach((portKey) => {
             const port = node.ports[portKey];
-            const { extras: { shortName, sortOrder, quickSelect }, label: name } = port;
-            const choice = port.extras.level ? {} : { name };
+            const { id, extras: { code, shortName, sortOrder, quickSelect }, label: name } = port;
+            const choice = port.extras.level ? { id } : { id, name };
+            choice.parentBranchId = branch.id;
+            if (code) choice.code = code;
             if (quickSelect) choice.quickSelect = quickSelect;
             if (sortOrder) choice.sortOrder = sortOrder;
             if (shortName) choice.shortName = shortName;
-            if (message) choice.message = message;
+            // if (message) choice.message = message;
 
             // Handle the typical scenario where this choice branches to another node
             _.keys(port.links).forEach((linkKey) => {
@@ -44,8 +49,13 @@ const generateDecisionTree = (model, node) => {
                 }
 
                 if (linkedNode) {
-                    // console.log('linkedNode', linkedNode);
-                    choice.branch = generateDecisionTree(model, linkedNode);
+                    if (linkedNode.type === 'SIRLevel') {
+                        choice.level = linkedNode.extras.level;
+                    } else {
+                        linkedNode.parentChoiceId = choice.id;
+                        console.log('linkedNode', linkedNode, choice);
+                        choice.branch = generateDecisionTree(model, linkedNode);
+                    }
                 }
             });
 
@@ -65,7 +75,7 @@ const getTrueTargetNode = (link) => {
 }
 
 export const diagramToJson = (model) => {
-    const jsonSIRScale = [];
+    let jsonSIRScale = {};
     log.trace('model', model);
     // Iterate through entry nodes
     _.keys(model.nodes).filter(nodeKey => model.nodes[nodeKey].type === 'FilterType').forEach((nodeKey) => {
@@ -84,7 +94,8 @@ export const diagramToJson = (model) => {
             name,
             root: generateDecisionTree(model, linkedNode),
         };
-        jsonSIRScale.push(ft);
+        // jsonSIRScale.push(ft);
+        jsonSIRScale = ft;
     });
     log.trace('jsonSIRScale', jsonSIRScale);
     log.trace(JSON.stringify(jsonSIRScale));
